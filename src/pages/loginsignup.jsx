@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const LoginSignup = () => {
   const [isLogin, setIsLogin] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // In a real app, perform authentication here
+    // For now, simply navigate to the dashboard
+    navigate('/dashboard');
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#EEF2FF] via-[#FAFAFA] to-[#ECFEFF] p-4 font-sans">
@@ -21,7 +30,7 @@ const LoginSignup = () => {
         </p>
 
         {/* Form */}
-        <form className="w-full" onSubmit={(e) => e.preventDefault()}>
+        <form className="w-full" onSubmit={handleSubmit}>
           
           {!isLogin && (
             <div className="mb-4">
