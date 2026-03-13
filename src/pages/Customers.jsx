@@ -108,7 +108,7 @@ const Customers = () => {
 
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg shadow text-sm font-semibold"
+          className="flex items-center gap-2 bg-[#0F3A53] hover:bg-[#0F3A53] text-white px-5 py-2.5 rounded-lg shadow text-sm font-semibold"
         >
           <Plus size={16} />
           Add Customer
@@ -297,7 +297,7 @@ const Customers = () => {
             <button className="px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-50">
               Previous
             </button>
-            <button className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button className="px-3 py-2 text-sm bg-[#0F3A53] text-white rounded-lg hover:bg-[#0F3A53]">
               1
             </button>
             <button className="px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
@@ -402,7 +402,7 @@ const Customers = () => {
 
               <button
                 onClick={handleAddCustomer}
-                className="px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700"
+                className="px-6 py-2.5 bg-[#0F3A53] text-white text-sm font-semibold rounded-lg hover:bg-[#0F3A53]"
               >
                 Save Customer
               </button>
