@@ -1,10 +1,9 @@
-import React from 'react'
-import LoginSignup from './pages/loginsignup'
+import React from "react";
 
-const App = () => {
-  return (
-    <LoginSignup />
-  )
+import Dashboard from "./pages/Dashboard";
+
+function App() {
+  return <Dashboard />;
 }
 
-export default App
+export default App;
