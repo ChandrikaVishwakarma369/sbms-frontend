@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Total Users",
+    "value": "1,245",
+    "change": "+12% since last week",
+    "icon": "Users"
+  },
+  {
+    "title": "Orders",
+    "value": "342",
+    "change": "+8% since yesterday",
+    "icon": "ShoppingCart"
+  },
+  {
+    "title": "Products",
+    "value": "89",
+    "change": "-2% since last month",
+    "icon": "Package"
+  },
+  {
+    "title": "Revenue",
+    "value": "$12,340",
+    "change": "+18% since last week",
+    "icon": "BarChart3"
+  }
+]
