@@ -1,8 +1,9 @@
-import React from 'react'
-
+import Invoices from './pages/Invoices'
 const App = () => {
   return (
-    <div>App</div>
+    <div>
+      <Invoices/>
+    </div>
   )
 }
 
