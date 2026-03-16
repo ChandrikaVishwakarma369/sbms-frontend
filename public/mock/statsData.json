@@ -1,6 +1,6 @@
 [
   {
-    "title": "Total Users",
+    "title": "Total Customers",
     "value": "1,245",
     "change": "+12% since last week",
     "icon": "Users"
@@ -19,7 +19,7 @@
   },
   {
     "title": "Revenue",
-    "value": "$12,340",
+    "value": "₹12,340",
     "change": "+18% since last week",
     "icon": "BarChart3"
   }
