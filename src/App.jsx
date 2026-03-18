@@ -1,7 +1,9 @@
 import React from "react";
+import { BrowserRouter, Routes, Route, Navigate , Router} from "react-router-dom";
+import LoginSignup from "./pages/loginsignup";
 import Invoices from "./pages/Invoices";
 import Dashboard from "./pages/Dashboard";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
 import Customers from "./pages/Customers";
 
 function App() {
