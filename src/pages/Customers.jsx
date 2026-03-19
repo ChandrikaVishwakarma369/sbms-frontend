@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { getCustomersMock } from "../services/customer.service";
 
+
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
