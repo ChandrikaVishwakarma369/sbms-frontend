@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getOrdersMock } from "../services/order.service";
 import jsPDF from "jspdf";
+import MainLayout from "../layout/MainLayout";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -21,6 +22,7 @@ const Orders = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [editOrderId, setEditOrderId] = useState(null);
 
   const [formData, setFormData] = useState({
     customer: "",
@@ -94,18 +96,7 @@ const Orders = () => {
     });
   };
 
-  // ➕ ADD ORDER
-  const handleAddOrder = () => {
-    if (!formData.customer || !formData.contact || !formData.product || !formData.amount) return;
-
-    const newOrder = {
-      id: Date.now(),
-      orderId: Math.floor(1000 + Math.random() * 9000),
-      ...formData,
-    };
-
-    setOrders([...orders, newOrder]);
-
+  const resetOrderForm = () => {
     setFormData({
       customer: "",
       contact: "",
@@ -115,7 +106,48 @@ const Orders = () => {
       amount: "",
       status: "Pending",
     });
+    setEditOrderId(null);
+  };
 
+  const handleOpenAddOrder = () => {
+    resetOrderForm();
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditOrder = (order) => {
+    setFormData({
+      customer: order.customer || "",
+      contact: order.contact || "",
+      product: order.product || "",
+      date: order.date || "",
+      address: order.address || "",
+      amount: order.amount || "",
+      status: order.status || "Pending",
+    });
+    setEditOrderId(order.id);
+    setIsAddModalOpen(true);
+  };
+
+  const handleSaveOrder = () => {
+    if (!formData.customer || !formData.contact || !formData.product || !formData.amount) return;
+
+    if (editOrderId) {
+      const updated = orders.map((o) =>
+        o.id === editOrderId
+          ? { ...o, ...formData, orderId: o.orderId || Math.floor(1000 + Math.random() * 9000) }
+          : o
+      );
+      setOrders(updated);
+    } else {
+      const newOrder = {
+        id: Date.now(),
+        orderId: Math.floor(1000 + Math.random() * 9000),
+        ...formData,
+      };
+      setOrders([...orders, newOrder]);
+    }
+
+    resetOrderForm();
     setIsAddModalOpen(false);
   };
 
@@ -209,7 +241,7 @@ const Orders = () => {
         </div>
 
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={handleOpenAddOrder}
           className="flex items-center gap-2 bg-[#0F3A53] hover:bg-[#0b2d44] text-white px-5 py-2.5 rounded-lg shadow-md text-sm font-semibold"
         >
           <Plus size={16} />
@@ -361,7 +393,10 @@ const Orders = () => {
                         >
                           <Eye size={16} />
                         </button>
-                        <button className="p-2 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 rounded">
+                        <button
+                          onClick={() => handleEditOrder(order)}
+                          className="p-2 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 rounded"
+                        >
                           <Edit2 size={16} />
                         </button>
 
@@ -410,13 +445,18 @@ const Orders = () => {
 
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">Add New Order</h2>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {editOrderId ? "Edit Order" : "Add New Order"}
+                </h2>
                 <p className="text-sm text-slate-400 mt-1">
                   Fill in the order details below
                 </p>
               </div>
               <button
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => {
+                  setIsAddModalOpen(false);
+                  resetOrderForm();
+                }}
                 className="text-slate-400 hover:text-slate-600 text-xl"
               >
                 ✕
@@ -538,10 +578,10 @@ const Orders = () => {
               </button>
 
               <button
-                onClick={handleAddOrder}
+                onClick={handleSaveOrder}
                 className="px-6 py-2.5 bg-[#0F3A53] text-white text-sm font-semibold rounded-lg hover:bg-[#0b2d44]"
               >
-                Save Order
+                {editOrderId ? "Update Order" : "Save Order"}
               </button>
             </div>
 
