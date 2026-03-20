@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+@layer utilities {
+  @keyframes logo-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @keyframes ring-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.1); opacity: 0.5; }
+  }
+
+  @keyframes glow-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .animate-logo-float {
+    animation: logo-float 4s ease-in-out infinite;
+  }
+
+  .animate-ring-pulse {
+    animation: ring-pulse 3s ease-in-out infinite;
+  }
+
+  .animate-glow-spin {
+    animation: glow-spin 10s linear infinite;
+  }
+
+  @keyframes fade-in-up {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+  }
+
+  @keyframes orbit {
+    0% { transform: rotate(0deg) translateX(5px) rotate(0deg); }
+    100% { transform: rotate(360deg) translateX(5px) rotate(-360deg); }
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.1); }
+  }
+
+  .animate-orbit {
+    animation: orbit 6s linear infinite;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 4s ease-in-out infinite;
+  }
+}

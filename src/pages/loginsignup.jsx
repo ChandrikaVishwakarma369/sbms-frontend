@@ -1,27 +1,68 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const LoginSignup = () => {
-  const [isLogin, setIsLogin] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // In a real app, perform authentication here
+    // For now, simply navigate to the dashboard
+    navigate('/dashboard');
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#EEF2FF] via-[#FAFAFA] to-[#ECFEFF] p-4 font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#EEF2FF] via-[#FAFAFA] to-[#0F3A53]/10 p-4 font-sans">
       <div className="w-full max-w-md bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-10 p-6 flex flex-col items-center">
         
-        {/* Logo */}
-        <div className="w-16 h-16 bg-gradient-to-b from-[#4A6BF3] to-[#2FBBA0] rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-          <span className="text-white text-xl font-bold tracking-wide">SB</span>
+        {/* Refined Animated Logo */}
+        <div className="relative mb-10 group">
+          {/* Outer Orbital Glow */}
+          <div className="absolute inset-0 bg-cyan-400/20 rounded-full blur-2xl animate-glow-spin scale-150"></div>
+          
+          {/* Logo Container with Orbit */}
+          <div className="relative w-20 h-20 flex items-center justify-center animate-logo-float">
+            
+            {/* Dark Teal Outer Ring */}
+            <div className="absolute inset-0 rounded-full border-[3px] border-[#0F3A53]/40 shadow-lg"></div>
+            
+            {/* Mid Cyan Ring with Soft Pulse */}
+            <div className="w-[85%] h-[85%] rounded-full bg-cyan-100 flex items-center justify-center shadow-md animate-pulse-soft">
+              
+              {/* Inner Bright Cyan Ring */}
+              <div className="w-[85%] h-[85%] rounded-full bg-cyan-200 flex items-center justify-center shadow-inner border border-white/50">
+                
+                {/* Core White Circle */}
+                <div className="w-[70%] h-[70%] bg-white rounded-full flex items-center justify-center font-black text-[#0F3A53] text-lg shadow-sm transition-all duration-500 group-hover:scale-110 group-hover:shadow-md">
+                  SB
+                </div>
+              </div>
+            </div>
+
+            {/* Accent Orbiting Dot */}
+            <div className="absolute top-0 left-0 w-full h-full animate-glow-spin">
+              <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee] border border-white"></div>
+            </div>
+          </div>
         </div>
 
         {/* Header */}
-        <h2 className="text-[1.75rem] font-bold text-gray-900 mb-2">
+        <h2 
+          key={isLogin ? 'login-title' : 'signup-title'}
+          className="text-[1.75rem] font-bold text-gray-900 mb-2 animate-fade-in-up"
+        >
           {isLogin ? 'Welcome Back' : 'Create an Account'}
         </h2>
-        <p className="text-gray-500 text-sm mb-8">
+        <p 
+          key={isLogin ? 'login-desc' : 'signup-desc'}
+          className="text-gray-500 text-sm mb-8 animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards]"
+        >
           {isLogin ? 'Sign in to manage your business' : 'Sign up to start managing your business'}
         </p>
 
         {/* Form */}
-        <form className="w-full" onSubmit={(e) => e.preventDefault()}>
+        <form className="w-full" onSubmit={handleSubmit}>
           
           {!isLogin && (
             <div className="mb-4">
@@ -33,7 +74,7 @@ const LoginSignup = () => {
                 </div>
                 <input
                   type="text"
-                  className="block w-full pl-11 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5551FF] focus:border-[#5551FF] sm:text-sm transition-colors"
+                  className="block w-full pl-11 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0F3A53] focus:border-[#0F3A53] sm:text-sm transition-colors"
                   placeholder="Full Name"
                   required={!isLogin}
                 />
@@ -51,7 +92,7 @@ const LoginSignup = () => {
               </div>
               <input
                 type="email"
-                className="block w-full pl-11 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5551FF] focus:border-[#5551FF] sm:text-sm transition-colors"
+                className="block w-full pl-11 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0F3A53] focus:border-[#0F3A53] sm:text-sm transition-colors"
                 placeholder={isLogin ? "admin@example.com" : "example@example.com"}
                 required
               />
@@ -68,7 +109,7 @@ const LoginSignup = () => {
               </div>
               <input
                 type="password"
-                className="block w-full pl-11 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5551FF] focus:border-[#5551FF] sm:text-sm transition-colors"
+                className="block w-full pl-11 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0F3A53] focus:border-[#0F3A53] sm:text-sm transition-colors"
                 placeholder="Password"
                 required
               />
@@ -86,7 +127,7 @@ const LoginSignup = () => {
                 </div>
                 <input
                   type="password"
-                  className="block w-full pl-11 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5551FF] focus:border-[#5551FF] sm:text-sm transition-colors"
+                  className="block w-full pl-11 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0F3A53] focus:border-[#0F3A53] sm:text-sm transition-colors"
                   placeholder="Confirm Password"
                   required={!isLogin}
                 />
@@ -102,7 +143,7 @@ const LoginSignup = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-[#5551FF] focus:ring-[#5551FF] border-gray-300 rounded cursor-pointer"
+                  className="h-4 w-4 text-[#0F3A53] focus:ring-[#0F3A53] border-gray-300 rounded cursor-pointer"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-500 cursor-pointer">
                   Remember me
@@ -110,7 +151,7 @@ const LoginSignup = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-semibold text-[#5551FF] hover:text-indigo-500 transition-colors">
+                <a href="#" className="font-semibold text-[#0F3A53] hover:text-[#0c2e42] transition-colors">
                   Forgot password?
                 </a>
               </div>
@@ -120,7 +161,7 @@ const LoginSignup = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full flex justify-center items-center py-3.5 px-4 rounded-xl shadow-[0_4px_14px_0_rgb(85,81,255,0.39)] text-sm font-medium text-white bg-[#5551FF] hover:bg-[#4d48e5] hover:shadow-[0_6px_20px_rgba(85,81,255,0.23)] hover:-translate-y-0.5 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5551FF] mb-8"
+            className="w-full flex justify-center items-center py-3.5 px-4 rounded-xl shadow-[0_4px_14px_0_rgba(15,58,83,0.39)] text-sm font-medium text-white bg-[#0F3A53] hover:bg-[#0c2e42] hover:shadow-[0_6px_20px_rgba(15,58,83,0.23)] hover:-translate-y-0.5 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0F3A53] mb-8"
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
@@ -137,7 +178,7 @@ const LoginSignup = () => {
             <button 
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="font-semibold text-[#5551FF] hover:text-[#4d48e5] transition-colors bg-transparent border-0 cursor-pointer focus:outline-none"
+              className="font-semibold text-[#0F3A53] hover:text-[#0c2e42] transition-colors bg-transparent border-0 cursor-pointer focus:outline-none"
             >
               {isLogin ? 'Sign Up' : 'Sign In'}
             </button>
