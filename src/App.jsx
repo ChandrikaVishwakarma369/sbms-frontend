@@ -1,23 +1,25 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate , Router} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
 import LoginSignup from "./pages/loginsignup";
 import Invoices from "./pages/Invoices";
 import Dashboard from "./pages/Dashboard";
-
 import Customers from "./pages/Customers";
+import Orders from "./pages/Orders";
 
 function App() {
   return (
     <Router>
       <Routes>
+
         {/* Default Route */}
         <Route path="/" element={<Dashboard />} />
-        
-        {/* Customers Page */}
-        <Route path="/customers" element={<Customers />} />
 
-        {/* Invoices Page */}
+        {/* Pages */}
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/orders" element={<Orders />} />
         <Route path="/invoices" element={<Invoices />} />
+
       </Routes>
     </Router>
   );
