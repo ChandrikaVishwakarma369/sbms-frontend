@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1",
+    "name": "Rahul Traders",
+    "phone": "9876543210",
+    "email": "rahul@gmail.com",
+    "gst": "22AAAAA0000A1Z5"
+  },
+  {
+    "id": "2",
+    "name": "Amit Enterprises",
+    "phone": "9123456789",
+    "email": "amit@gmail.com",
+    "gst": "27BBBBB1111B2Z6"
+  }
+]
