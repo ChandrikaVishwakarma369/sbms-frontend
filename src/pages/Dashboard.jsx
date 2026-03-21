@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import MainLayout from "../layout/MainLayout";
 import StatsCard from "../components/StatsCard";
 import SalesChart from "../components/SalesChart";
 import RecentOrdersTable from "../components/RecentOrdersTable";
@@ -16,13 +15,6 @@ const iconMap = {
 };
 
 const Dashboard = () => {
-  return (
-    <MainLayout>
-      <div className="bg-white p-6 rounded-xl shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Dashboard Overview
-        </h1>
-        <p className="text-gray-600 mt-2">Welcome to your dashboard.</p>
   const [statsData, setStatsData] = useState([]);
 
   useEffect(() => {
@@ -33,7 +25,13 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <MainLayout>
+    <>
+      <div className="bg-white p-6 rounded-xl shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+        <p className="text-gray-600 mt-2">Welcome to your dashboard.</p>
+      </div>
+
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
         {statsData.map((item, index) => (
           <StatsCard
@@ -45,12 +43,16 @@ const Dashboard = () => {
           />
         ))}
       </div>
-      <div className="grid grid-cols-3 gap-6 mt-6">
+
+      {/* Chart + Invoices */}
+      <div className="grid grid-cols-3 gap-6 mt-6 px-6">
         <div className="col-span-2">
           <SalesChart />
         </div>
         <RecentInvoicesTable />
       </div>
+
+      {/* Bottom Section */}
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="grid grid-cols-3 gap-6">
           <PendingPayments />
@@ -58,7 +60,7 @@ const Dashboard = () => {
           <LowStockAlert />
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 };
 

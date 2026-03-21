@@ -1,25 +1,29 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate , Router} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import LoginSignup from "./pages/loginsignup";
 import Invoices from "./pages/Invoices";
 import Dashboard from "./pages/Dashboard";
-
 import Customers from "./pages/Customers";
+import MainLayout from "./layout/MainLayout";
+import SettingsPage from "./pages/Settings";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Default Route */}
-        <Route path="/" element={<Dashboard />} />
-        
-        {/* Customers Page */}
+    <Routes>
+      {/* Layout Routes */}
+      <Route element={<MainLayout />}>
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/customers" element={<Customers />} />
-
-        {/* Invoices Page */}
         <Route path="/invoices" element={<Invoices />} />
-      </Routes>
-    </Router>
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+
+      {/* without layout */}
+      <Route path="/login" element={<LoginSignup />} />
+
+      {/* Default routes */}
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+    </Routes>
   );
 }
 
