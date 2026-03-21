@@ -1,8 +1,9 @@
 import React from "react";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import { Outlet } from "react-router-dom";
 
-const MainLayout = ({ children }) => {
+const MainLayout = () => {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* -------------Sidebar-------------*/}
@@ -19,7 +20,9 @@ const MainLayout = ({ children }) => {
         </div>
 
         {/* ------------content area-------------- */}
-        <div className="flex-1 overflow-auto p-6">{children}</div>
+        <div className="flex-1 overflow-auto p-6">
+          <Outlet />
+        </div>
       </div>
     </div>
   );
