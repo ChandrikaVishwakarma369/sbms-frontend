@@ -10,12 +10,14 @@ import {
   Building2,
 } from "lucide-react";
 import { getCustomersMock } from "../services/customer.service";
+import MainLayout from "../layout/MainLayout";
 
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editCustomerId, setEditCustomerId] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -61,24 +63,52 @@ const Customers = () => {
     });
   };
 
-  const handleAddCustomer = () => {
-    if (!formData.name || !formData.email || !formData.phone) return;
-
-    const newCustomer = {
-      id: Date.now(),
-      ...formData,
-      status: "Active",
-    };
-
-    setCustomers([...customers, newCustomer]);
-
+  const resetCustomerForm = () => {
     setFormData({
       name: "",
       email: "",
       phone: "",
       gst: "",
     });
+    setEditCustomerId(null);
+  };
 
+  const handleOpenAddCustomer = () => {
+    resetCustomerForm();
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditCustomer = (customer) => {
+    setFormData({
+      name: customer.name || "",
+      email: customer.email || "",
+      phone: customer.phone || "",
+      gst: customer.gst || "",
+    });
+    setEditCustomerId(customer.id);
+    setIsAddModalOpen(true);
+  };
+
+  const handleSaveCustomer = () => {
+    if (!formData.name || !formData.email || !formData.phone) return;
+
+    if (editCustomerId) {
+      const updated = customers.map((c) =>
+        c.id === editCustomerId
+          ? { ...c, ...formData, status: c.status || "Active" }
+          : c
+      );
+      setCustomers(updated);
+    } else {
+      const newCustomer = {
+        id: Date.now(),
+        ...formData,
+        status: "Active",
+      };
+      setCustomers([...customers, newCustomer]);
+    }
+
+    resetCustomerForm();
     setIsAddModalOpen(false);
   };
 
@@ -107,7 +137,7 @@ const Customers = () => {
         </div>
 
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={handleOpenAddCustomer}
           className="flex items-center gap-2 bg-[#0F3A53] hover:bg-[#0F3A53] text-white px-5 py-2.5 rounded-lg shadow text-sm font-semibold"
         >
           <Plus size={16} />
@@ -264,7 +294,10 @@ const Customers = () => {
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
 
-                        <button className="p-2 hover:bg-indigo-50 rounded text-slate-400 hover:text-indigo-600">
+                        <button
+                          onClick={() => handleEditCustomer(customer)}
+                          className="p-2 hover:bg-indigo-50 rounded text-slate-400 hover:text-indigo-600"
+                        >
                           <Edit2 size={16} />
                         </button>
 
@@ -318,7 +351,7 @@ const Customers = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
-                  Add New Customer
+                  {editCustomerId ? "Edit Customer" : "Add New Customer"}
                 </h2>
                 <p className="text-sm text-slate-400 mt-1">
                   Fill in the details below
@@ -326,7 +359,10 @@ const Customers = () => {
               </div>
 
               <button
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => {
+                  setIsAddModalOpen(false);
+                  resetCustomerForm();
+                }}
                 className="text-slate-400 hover:text-slate-600 text-xl"
               >
                 ✕
@@ -401,10 +437,10 @@ const Customers = () => {
               </button>
 
               <button
-                onClick={handleAddCustomer}
+                onClick={handleSaveCustomer}
                 className="px-6 py-2.5 bg-[#0F3A53] text-white text-sm font-semibold rounded-lg hover:bg-[#0F3A53]"
               >
-                Save Customer
+                {editCustomerId ? "Update Customer" : "Save Customer"}
               </button>
 
             </div>

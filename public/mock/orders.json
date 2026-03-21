@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "orderId": 1001,
+    "customer": "Rahul Traders",
+    "contact": "9876543210",
+    "product": "Laptop",
+    "date": "12 Mar 2024",
+    "address": "Delhi, India",
+    "amount": 12500,
+    "status": "Shipped"
+  },
+  {
+    "id": 2,
+    "orderId": 1002,
+    "customer": "Amit Enterprises",
+    "contact": "9123456780",
+    "product": "Mobile",
+    "date": "10 Mar 2024",
+    "address": "Mumbai, India",
+    "amount": 8200,
+    "status": "Pending"
+  },
+  {
+    "id": 3,
+    "orderId": 1003,
+    "customer": "Verma Industries",
+    "contact": "9988776655",
+    "product": "Printer",
+    "date": "08 Mar 2024",
+    "address": "Jaipur, India",
+    "amount": 25000,
+    "status": "Delivered"
+  },
+  {
+    "id": 4,
+    "orderId": 1004,
+    "customer": "Sharma & Sons",
+    "contact": "9090909090",
+    "product": "Keyboard",
+    "date": "05 Mar 2024",
+    "address": "Pune, India",
+    "amount": 5000,
+    "status": "Cancelled"
+  },
+  {
+    "id": 5,
+    "orderId": 1005,
+    "customer": "Gupta Electronics",
+    "contact": "8765432109",
+    "product": "Monitor",
+    "date": "15 Mar 2024",
+    "address": "Chennai, India",
+    "amount": 18000,
+    "status": "Shipped"
+  },
+  {
+    "id": 6,
+    "orderId": 1006,
+    "customer": "Singh Brothers",
+    "contact": "7654321098",
+    "product": "Mouse",
+    "date": "18 Mar 2024",
+    "address": "Kolkata, India",
+    "amount": 1200,
+    "status": "Pending"
+  },
+  {
+    "id": 7,
+    "orderId": 1007,
+    "customer": "Patel Traders",
+    "contact": "6543210987",
+    "product": "Tablet",
+    "date": "20 Mar 2024",
+    "address": "Ahmedabad, India",
+    "amount": 15000,
+    "status": "Delivered"
+  }
+  
+]
