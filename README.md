@@ -64,6 +64,7 @@ SBMS-Frontend/
     ├── assets/
     ├── pages/
     │   └── Invoices.jsx
+    │   └── Products.jsx
     └── services/
         └── invoice.service.js
 ```
