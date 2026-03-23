@@ -5,6 +5,7 @@ import Invoices from "./pages/Invoices";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Customers from "./pages/Customers";
+import Employees from "./pages/Employees";
 import MainLayout from "./layout/MainLayout";
 import SettingsPage from "./pages/Settings";
 
@@ -16,6 +17,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/products" element={<Products/>} />
         <Route path="/customers" element={<Customers />} />
+        <Route path="/employees" element={<Employees />} />
         <Route path="/invoices" element={<Invoices />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
