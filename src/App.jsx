@@ -7,6 +7,8 @@ import Products from "./pages/Products";
 import Customers from "./pages/Customers";
 import MainLayout from "./layout/MainLayout";
 import SettingsPage from "./pages/Settings";
+import Report from "./pages/Report";
+import Orders from "./pages/Orders";
 
 function App() {
   return (
@@ -14,9 +16,11 @@ function App() {
       {/* Layout Routes */}
       <Route element={<MainLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/products" element={<Products/>} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/orders" element={<Orders />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/invoices" element={<Invoices />} />
+        <Route path="/report" element={<Report />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
