@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from "react";
+import {
+  Users,
+  ShoppingCart,
+  Package,
+  BarChart3,
+  Calendar,
+} from "lucide-react";
+
+// Components Imports
 import StatsCard from "../components/StatsCard";
 import SalesChart from "../components/SalesChart";
 import RecentOrdersTable from "../components/RecentOrdersTable";
 import LowStockAlert from "../components/LowStockAlert";
 import RecentInvoicesTable from "../components/RecentInvoicesTable";
 import PendingPayments from "../components/PendingPayments";
-import { Users, ShoppingCart, Package, BarChart3 } from "lucide-react";
+import QuickActionHub from "../components/QuickActionHub";
 
 const iconMap = {
   Users: <Users size={24} />,
@@ -25,14 +34,35 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <>
-      <div className="bg-white p-6 rounded-xl shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
-        <p className="text-gray-600 mt-2">Welcome to your dashboard.</p>
+    <div className="bg-[#f3f4f6] min-h-screen p-4 md:p-8 space-y-8">
+      {/* 🔹 1. Header Section - UPDATED TO MATCH SALESCHART STYLE */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-all">
+        <div className="flex justify-between items-center">
+          <div>
+            {/* Chart jaisa font style aur color */}
+            <h2 className="text-lg font-semibold text-gray-800">
+              Dashboard Overview
+            </h2>
+            {/* Chart jaisa subtitle style */}
+            <p className="text-sm text-gray-400">
+              Welcome back to your business control center.
+            </p>
+          </div>
+
+          {/* Chart jaisa badge style (Yahan Date ya Status dikha sakte hain) */}
+          <div className="hidden sm:flex items-center gap-2 bg-blue-50 text-blue-600 text-xs font-semibold px-4 py-1.5 rounded-full">
+            <Calendar size={14} />
+            {new Date().toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+      {/* 🔹 2. Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsData.map((item, index) => (
           <StatsCard
             key={index}
@@ -44,23 +74,26 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Chart + Invoices */}
-      <div className="grid grid-cols-3 gap-6 mt-6 px-6">
-        <div className="col-span-2">
+      {/* 🔹 3. Charts & Invoices */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="xl:col-span-2">
           <SalesChart />
         </div>
-        <RecentInvoicesTable />
-      </div>
-
-      {/* Bottom Section */}
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="grid grid-cols-3 gap-6">
-          <PendingPayments />
-          <RecentOrdersTable />
-          <LowStockAlert />
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <RecentInvoicesTable />
         </div>
       </div>
-    </>
+
+      {/* 🔹 4. Quick Action Hub */}
+      <QuickActionHub />
+
+      {/* 🔹 5. Bottom Tables */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8">
+        <PendingPayments />
+        <RecentOrdersTable />
+        <LowStockAlert />
+      </div>
+    </div>
   );
 };
 
