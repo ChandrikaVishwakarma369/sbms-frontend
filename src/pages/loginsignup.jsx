@@ -176,30 +176,19 @@ const LoginSignup = () => {
 
           {/* Login Options */}
           {isLogin && (
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-[#0F3A53] focus:ring-[#0F3A53] border-gray-300 rounded cursor-pointer"
-                />
-                <label
-                  htmlFor="remember-me"
-                  className="ml-2 block text-sm text-gray-500 cursor-pointer"
-                >
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-sm">
-                <a
-                  href="#"
-                  className="font-semibold text-[#0F3A53] hover:text-[#0c2e42] transition-colors"
-                >
-                  Forgot password?
-                </a>
-              </div>
+            <div className="flex items-center mb-8">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-[#0F3A53] focus:ring-[#0F3A53] border-gray-300 rounded cursor-pointer"
+              />
+              <label
+                htmlFor="remember-me"
+                className="ml-2 block text-sm text-gray-500 cursor-pointer"
+              >
+                Remember me
+              </label>
             </div>
           )}
 
@@ -219,24 +208,9 @@ const LoginSignup = () => {
             >
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
             </svg>
-            {isLogin ? "Sign In" : "Sign Up"}
+            { "Sign In" }
           </button>
         </form>
-
-        {/* Footer Toggle */}
-        <div className="w-full text-center relative mt-2">
-          <div className="absolute top-0 left-0 w-full h-[1px] bg-gray-100 -mt-6"></div>
-          <p className="text-sm text-gray-500">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="font-semibold text-[#0F3A53] hover:text-[#0c2e42] transition-colors bg-transparent border-0 cursor-pointer focus:outline-none"
-            >
-              {isLogin ? "Sign Up" : "Sign In"}
-            </button>
-          </p>
-        </div>
       </div>
     </div>
   );
