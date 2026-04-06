@@ -9,7 +9,13 @@ import {
   Mail,
   Building2,
 } from "lucide-react";
-import { getCustomersMock } from "../services/customer.service";
+import { 
+  getCustomers, 
+  getCustomerStats, 
+  createCustomer, 
+  updateCustomer, 
+  deleteCustomer 
+} from "../services/customer.service";
 import MainLayout from "../layout/MainLayout";
 
 const Customers = () => {
@@ -18,6 +24,11 @@ const Customers = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editCustomerId, setEditCustomerId] = useState(null);
+  const [stats, setStats] = useState({
+    totalCustomers: 0,
+    activeCustomers: 0,
+    customersWithGST: 0,
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -27,19 +38,24 @@ const Customers = () => {
   });
 
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const data = await getCustomersMock();
-        setCustomers(data);
-      } catch (error) {
-        console.error("Failed to load customers:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCustomers();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [customersData, statsData] = await Promise.all([
+        getCustomers(),
+        getCustomerStats()
+      ]);
+      setCustomers(customersData);
+      setStats(statsData);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredCustomers = customers.filter(
     (c) =>
@@ -89,37 +105,50 @@ const Customers = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleSaveCustomer = () => {
+  const handleSaveCustomer = async () => {
     if (!formData.name || !formData.email || !formData.phone) return;
 
-    if (editCustomerId) {
-      const updated = customers.map((c) =>
-        c.id === editCustomerId
-          ? { ...c, ...formData, status: c.status || "Active" }
-          : c
-      );
-      setCustomers(updated);
-    } else {
-      const newCustomer = {
-        id: Date.now(),
-        ...formData,
-        status: "Active",
-      };
-      setCustomers([...customers, newCustomer]);
+    try {
+      if (editCustomerId) {
+        const response = await updateCustomer(editCustomerId, formData);
+        if (response.success) {
+          await fetchData(); // Refresh both list and stats
+        } else {
+          alert(response.message || "Failed to update customer");
+        }
+      } else {
+        const response = await createCustomer(formData);
+        if (response.success) {
+          await fetchData();
+        } else {
+          alert(response.message || "Failed to add customer");
+        }
+      }
+      setIsAddModalOpen(false);
+      resetCustomerForm();
+    } catch (error) {
+      console.error("Error saving customer:", error);
+      alert("Something went wrong while saving.");
     }
-
-    resetCustomerForm();
-    setIsAddModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this customer?"
     );
 
     if (confirmDelete) {
-      const updated = customers.filter((c) => c.id !== id);
-      setCustomers(updated);
+      try {
+        const response = await deleteCustomer(id);
+        if (response.success) {
+          await fetchData();
+        } else {
+          alert(response.message || "Failed to delete customer");
+        }
+      } catch (error) {
+        console.error("Error deleting customer:", error);
+        alert("Something went wrong while deleting.");
+      }
     }
   };
 
@@ -155,7 +184,7 @@ const Customers = () => {
           </div>
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">Total Customers</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">{customers.length}</p>
+            <p className="text-2xl font-bold text-slate-800 mt-1">{stats.totalCustomers}</p>
           </div>
         </div>
 
@@ -165,7 +194,7 @@ const Customers = () => {
           </div>
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">Active</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">{customers.length}</p>
+            <p className="text-2xl font-bold text-slate-800 mt-1">{stats.activeCustomers}</p>
           </div>
         </div>
 
@@ -176,7 +205,7 @@ const Customers = () => {
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">With GST</p>
             <p className="text-2xl font-bold text-slate-800 mt-1">
-              {customers.filter((c) => c.gst).length}
+              {stats.customersWithGST}
             </p>
           </div>
         </div>
