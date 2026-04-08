@@ -1,15 +1,36 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const LoginSignup = () => {
   const [isLogin, setIsLogin] = useState(true);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   // In a real app, perform authentication here
+  //   // For now, simply navigate to the dashboard
+  //   navigate("/dashboard");
+  // };
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, perform authentication here
-    // For now, simply navigate to the dashboard
-    navigate("/dashboard");
+
+    const email = e.target[0].value;
+    const password = e.target[1].value;
+
+    try {
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
+        email,
+        password,
+      });
+
+      console.log(res.data);
+
+      // agar login success
+      navigate("/dashboard");
+    } catch (error) {
+      alert("Login failed ❌");
+    }
   };
 
   return (
@@ -208,7 +229,7 @@ const LoginSignup = () => {
             >
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
             </svg>
-            { "Sign In" }
+            {"Sign In"}
           </button>
         </form>
       </div>
