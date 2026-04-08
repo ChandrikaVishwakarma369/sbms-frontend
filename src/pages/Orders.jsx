@@ -404,7 +404,7 @@ const Orders = () => {
         </div>
 
         {/* TABLE */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-sm">
 
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">

@@ -397,7 +397,7 @@ const Customers = () => {
 
         {/* TABLE */}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[400px]">
 
           <table className="w-full text-sm">
 
