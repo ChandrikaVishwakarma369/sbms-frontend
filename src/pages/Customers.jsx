@@ -30,6 +30,8 @@ const Customers = () => {
     customersWithGST: 0,
   });
   const [gstFilter, setGstFilter] = useState("All"); // All, With GST, Without GST
+  const [statusFilter, setStatusFilter] = useState("All"); // All, Active, Inactive
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [gstError, setGstError] = useState("");
 
   const [formData, setFormData] = useState({
@@ -41,13 +43,16 @@ const Customers = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [gstFilter, statusFilter]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // Map frontend filter values to API parameters
+      const gstParam = gstFilter === "With GST" ? "true" : gstFilter === "Without GST" ? "false" : null;
+
       const [customersData, statsData] = await Promise.all([
-        getCustomers(),
+        getCustomers(statusFilter, gstParam),
         getCustomerStats()
       ]);
       setCustomers(customersData);
@@ -65,12 +70,7 @@ const Customers = () => {
       c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.phone.includes(searchTerm);
 
-    const matchesGst =
-      gstFilter === "All" ||
-      (gstFilter === "With GST" && c.gstNumber) ||
-      (gstFilter === "Without GST" && !c.gstNumber);
-
-    return matchesSearch && matchesGst;
+    return matchesSearch;
   });
 
   const avatarColors = [
@@ -266,22 +266,96 @@ const Customers = () => {
 
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
-              {["All", "With GST", "Without GST"].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setGstFilter(filter)}
-                  className={`px-3 py-2 text-xs font-medium transition-colors ${
-                    gstFilter === filter
-                      ? "bg-[#0F3A53] text-white"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center gap-2 border ${
+                gstFilter !== "All" || statusFilter !== "All"
+                  ? "border-[#0F3A53] bg-blue-50 text-[#0F3A53]"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              } px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm`}
+            >
+              <Filter size={16} />
+              Filter
+              {(gstFilter !== "All" || statusFilter !== "All") && (
+                <span className="w-2 h-2 bg-[#0F3A53] rounded-full animate-pulse"></span>
+              )}
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setIsFilterOpen(false)}
+                ></div>
+                <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl z-20 overflow-hidden transform origin-top-right transition-all">
+                  <div className="p-4 border-b border-slate-50 bg-slate-50/50">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-700">Filter Customers</h3>
+                      <Filter size={14} className="text-slate-400" />
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 space-y-5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                        Account Status
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {["All", "Active", "Inactive"].map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => setStatusFilter(status)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                              statusFilter === status 
+                              ? "bg-[#0F3A53] text-white shadow-lg shadow-blue-100" 
+                              : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                        GST Registration
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {["All", "With GST", "Without GST"].map((gst) => (
+                          <button
+                            key={gst}
+                            onClick={() => setGstFilter(gst)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                              gstFilter === gst 
+                              ? "bg-[#0F3A53] text-white shadow-lg shadow-blue-100" 
+                              : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            {gst}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {(statusFilter !== "All" || gstFilter !== "All") && (
+                    <div className="p-3 border-t border-slate-50 bg-slate-50/30">
+                      <button 
+                        onClick={() => {
+                          setStatusFilter("All");
+                          setGstFilter("All");
+                        }}
+                        className="w-full py-2 text-xs text-red-500 hover:bg-red-50 rounded-xl transition-colors font-bold flex items-center justify-center gap-2"
+                      >
+                        Reset All Filters
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
         </div>
@@ -367,9 +441,15 @@ const Customers = () => {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700 inline-flex items-center gap-1">
-                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-                        Active
+                      <span className={`text-xs px-3 py-1 rounded-full inline-flex items-center gap-1 font-medium ${
+                        customer.status === "Active" 
+                        ? "bg-green-100 text-green-700" 
+                        : "bg-slate-100 text-slate-600"
+                      }`}>
+                        <span className={`w-2 h-2 rounded-full ${
+                          customer.status === "Active" ? "bg-green-600" : "bg-slate-400"
+                        }`}></span>
+                        {customer.status || "Active"}
                       </span>
                     </td>
 

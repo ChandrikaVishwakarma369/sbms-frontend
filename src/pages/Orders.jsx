@@ -23,6 +23,8 @@ const Orders = () => {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [editOrderId, setEditOrderId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     customer: "",
@@ -37,7 +39,8 @@ const Orders = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const data = await getOrdersMock();
+        setIsLoading(true);
+        const data = await getOrdersMock(statusFilter);
         setOrders(data);
       } catch (err) {
         console.error("Error loading orders", err);
@@ -47,15 +50,17 @@ const Orders = () => {
     };
 
     fetchOrders();
-  }, []);
+  }, [statusFilter]);
 
   // 🔍 FILTER
-  const filteredOrders = orders.filter(
-    (o) =>
+  const filteredOrders = orders.filter((o) => {
+    const matchesSearch =
       o.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.orderId.toString().includes(searchTerm)
-  );
+      o.orderId.toString().includes(searchTerm);
+
+    return matchesSearch;
+  });
 
   // 🎨 STATUS STYLE
   const getStatusStyle = (status) => {
@@ -322,10 +327,48 @@ const Orders = () => {
             />
           </div>
 
-          <button className="flex items-center gap-2 border border-slate-200 px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-            <Filter size={16} />
-            Filter
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center gap-2 border ${
+                statusFilter !== "All"
+                  ? "border-[#0F3A53] bg-blue-50 text-[#0F3A53]"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              } px-4 py-2 rounded-lg text-sm transition-all`}
+            >
+              <Filter size={16} />
+              {statusFilter === "All" ? "Filter" : statusFilter}
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsFilterOpen(false)}
+                ></div>
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-2">
+                  {["All", "Pending", "Shipped", "Delivered", "Cancelled"].map(
+                    (status) => (
+                      <button
+                        key={status}
+                        onClick={() => {
+                          setStatusFilter(status);
+                          setIsFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                          statusFilter === status
+                            ? "text-[#0F3A53] font-bold bg-blue-50/50"
+                            : "text-slate-600"
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    )
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* TABLE */}

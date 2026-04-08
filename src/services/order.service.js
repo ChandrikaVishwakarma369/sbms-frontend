@@ -1,9 +1,15 @@
 const API_URL = "http://localhost:5000/api/orders";
 
 // 📥 GET ALL ORDERS
-export const getOrdersMock = async () => {
+export const getOrdersMock = async (status = "All", page = 1, limit = 100) => {
   try {
-    const res = await fetch(`${API_URL}/`);
+    const queryParams = new URLSearchParams({
+      status,
+      page,
+      limit,
+    }).toString();
+
+    const res = await fetch(`${API_URL}/?${queryParams}`);
     if (!res.ok) throw new Error("Failed to fetch orders");
     const data = await res.json();
     return data.data || [];
