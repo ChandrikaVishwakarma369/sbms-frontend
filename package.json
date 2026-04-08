@@ -15,9 +15,12 @@
     "framer-motion": "^12.38.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.577.0",
+    "phone": "^3.1.71",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",
+    "react-hot-toast": "^2.6.0",
+    "react-phone-input-2": "^2.15.1",
     "react-router-dom": "^7.13.1",
     "tailwind": "^4.0.0",
     "tailwindcss": "^4.2.1"
