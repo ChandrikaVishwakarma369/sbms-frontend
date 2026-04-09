@@ -10,10 +10,19 @@ import {
   Clock,
   Eye,
   Download,
+  ChevronDown,
+  Check,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { getOrdersMock, createOrder, updateOrder, deleteOrder } from "../services/order.service";
+import { phone } from "phone";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import MainLayout from "../layout/MainLayout";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -23,6 +32,11 @@ const Orders = () => {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [editOrderId, setEditOrderId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
 
   const [formData, setFormData] = useState({
     customer: "",
@@ -37,7 +51,8 @@ const Orders = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const data = await getOrdersMock();
+        setIsLoading(true);
+        const data = await getOrdersMock(statusFilter);
         setOrders(data);
       } catch (err) {
         console.error("Error loading orders", err);
@@ -47,15 +62,17 @@ const Orders = () => {
     };
 
     fetchOrders();
-  }, []);
+  }, [statusFilter]);
 
   // 🔍 FILTER
-  const filteredOrders = orders.filter(
-    (o) =>
+  const filteredOrders = orders.filter((o) => {
+    const matchesSearch =
       o.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.orderId.toString().includes(searchTerm)
-  );
+      o.orderId.toString().includes(searchTerm);
+
+    return matchesSearch;
+  });
 
   // 🎨 STATUS STYLE
   const getStatusStyle = (status) => {
@@ -130,48 +147,68 @@ const Orders = () => {
 
   const handleSaveOrder = async () => {
     if (!formData.customer || !formData.contact || !formData.product || !formData.amount) {
-      alert("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
+
+    // Contact Validation & Normalization (adding + if missing)
+    const phoneToValidate = formData.contact.startsWith("+") ? formData.contact : `+${formData.contact}`;
+    const phoneResult = phone(phoneToValidate, { country: "IND" });
+    if (!phoneResult.isValid) {
+      toast.error("Please enter a valid contact number");
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      contact: phoneResult.phoneNumber // Normalized to E.164 format
+    };
 
     try {
       if (editOrderId) {
         // Update existing order
-        await updateOrder(editOrderId, formData);
+        await updateOrder(editOrderId, payload);
         const updated = orders.map((o) =>
           o.id === editOrderId
-            ? { ...o, ...formData }
+            ? { ...o, ...payload }
             : o
         );
         setOrders(updated);
       } else {
         // Create new order
-        const newOrder = await createOrder(formData);
+        const newOrder = await createOrder(payload);
         setOrders([...orders, newOrder]);
       }
 
       resetOrderForm();
       setIsAddModalOpen(false);
-      alert(editOrderId ? "Order updated successfully!" : "Order created successfully!");
+      toast.success(editOrderId ? "Order updated successfully!" : "Order created successfully!");
     } catch (error) {
       console.error("Error saving order:", error);
       const errorMessage = error.message || "Error saving order. Please try again.";
-      alert(`❌ ${errorMessage}\n\nCheck browser console for details. Make sure backend is running on http://localhost:5000`);
+      toast.error(`❌ ${errorMessage}`);
     }
   };
 
   // ❌ DELETE
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Delete this order?");
-    if (confirmDelete) {
-      try {
-        await deleteOrder(id);
-        setOrders(orders.filter((o) => o.id !== id));
-        alert("Order deleted successfully!");
-      } catch (error) {
-        console.error("Error deleting order:", error);
-        alert("Error deleting order. Please try again.");
-      }
+  const handleDeleteClick = (order) => {
+    setOrderToDelete(order);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!orderToDelete) return;
+
+    try {
+      await deleteOrder(orderToDelete.id);
+      setOrders(orders.filter((o) => o.id !== orderToDelete.id));
+      toast.success("Order deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("Error deleting order. Please try again.");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setOrderToDelete(null);
     }
   };
 
@@ -322,14 +359,52 @@ const Orders = () => {
             />
           </div>
 
-          <button className="flex items-center gap-2 border border-slate-200 px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-            <Filter size={16} />
-            Filter
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center gap-2 border ${
+                statusFilter !== "All"
+                  ? "border-[#0F3A53] bg-blue-50 text-[#0F3A53]"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              } px-4 py-2 rounded-lg text-sm transition-all`}
+            >
+              <Filter size={16} />
+              {statusFilter === "All" ? "Filter" : statusFilter}
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsFilterOpen(false)}
+                ></div>
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-2">
+                  {["All", "Pending", "Shipped", "Delivered", "Cancelled"].map(
+                    (status) => (
+                      <button
+                        key={status}
+                        onClick={() => {
+                          setStatusFilter(status);
+                          setIsFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                          statusFilter === status
+                            ? "text-[#0F3A53] font-bold bg-blue-50/50"
+                            : "text-slate-600"
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    )
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* TABLE */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-sm">
 
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
@@ -417,7 +492,7 @@ const Orders = () => {
                         </button>
 
                         <button
-                          onClick={() => handleDelete(order.id)}
+                          onClick={() => handleDeleteClick(order)}
                           className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded"
                         >
                           <Trash2 size={16} />
@@ -499,12 +574,15 @@ const Orders = () => {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Contact
                   </label>
-                  <input
-                    name="contact"
-                    placeholder="Contact number"
+                  <PhoneInput
+                    country={"in"}
                     value={formData.contact}
-                    onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
+                    onChange={(contact) => setFormData({ ...formData, contact })}
+                    containerClass="!w-full"
+                    inputClass="!w-full !py-3 !pl-12 !pr-4 !text-sm !border-slate-200 !rounded-lg focus:!ring-2 focus:!ring-indigo-500 !outline-none !bg-white !placeholder-slate-400"
+                    buttonClass="!bg-white !border-slate-200 !rounded-l-lg"
+                    dropdownClass="!bg-white !border-slate-200 !rounded-lg !shadow-xl"
+                    placeholder="Enter contact number"
                   />
                 </div>
               </div>
@@ -569,17 +647,51 @@ const Orders = () => {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Status
                   </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                  >
-                    <option>Pending</option>
-                    <option>Shipped</option>
-                    <option>Delivered</option>
-                    <option>Cancelled</option>
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsStatusOpen(!isStatusOpen)}
+                      className="w-full flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all hover:border-slate-300"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${getStatusDotStyle(formData.status)}`}></span>
+                        <span className="font-medium text-slate-700">{formData.status}</span>
+                      </div>
+                      <ChevronDown size={16} className={`text-slate-400 transition-transform ${isStatusOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {isStatusOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setIsStatusOpen(false)}></div>
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl z-20 overflow-hidden py-1 transform origin-top animate-in fade-in zoom-in duration-200">
+                          {[
+                            { name: "Pending", icon: <Clock size={14} className="text-yellow-600" /> },
+                            { name: "Shipped", icon: <Truck size={14} className="text-green-600" /> },
+                            { name: "Delivered", icon: <CheckCircle size={14} className="text-blue-600" /> },
+                            { name: "Cancelled", icon: <XCircle size={14} className="text-red-600" /> }
+                          ].map((status) => (
+                            <button
+                              key={status.name}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, status: status.name });
+                                setIsStatusOpen(false);
+                              }}
+                              className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                {status.icon}
+                                <span className={`${formData.status === status.name ? "text-[#0F3A53] font-bold" : "text-slate-600"}`}>
+                                  {status.name}
+                                </span>
+                              </div>
+                              {formData.status === status.name && <Check size={14} className="text-[#0F3A53]" />}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -700,6 +812,15 @@ const Orders = () => {
         </div>
       )}
 
+      {/* DELETE CONFIRMATION MODAL */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Order"
+        message={`Are you sure you want to delete order #${orderToDelete?.orderId} for "${orderToDelete?.customer}"? This action cannot be undone.`}
+        confirmText="Delete Order"
+      />
     </div>
   );
 };
