@@ -1,127 +1,123 @@
 import { useState } from "react";
+import { useEffect } from "react";
+import API from "../utils/api";
+import { X } from "lucide-react";
 
-const INITIAL_PRODUCTS = [
-  {
-    id: 1,
-    name: "Smartphone X",
-    category: "Electronics",
-    price: 199.0,
-    status: "Active",
-    stock: 45,
-    image:
-      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=56&h=56&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Wireless Headphones",
-    category: "Accessories",
-    price: 89.0,
-    status: "Active",
-    stock: 30,
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=56&h=56&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Smartphone XM",
-    category: "Electronics",
-    price: 119.0,
-    status: "Active",
-    stock: 20,
-    image:
-      "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=56&h=56&fit=crop",
-  },
-  {
-    id: 4,
-    name: "Smart Watch",
-    category: "Wearables",
-    price: 110.0,
-    status: "Low Stock",
-    stock: 5,
-    image:
-      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=56&h=56&fit=crop",
-  },
-  {
-    id: 5,
-    name: "Laptop Pro 15",
-    category: "Computers",
-    price: 999.0,
-    status: "Active",
-    stock: 12,
-    image:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=56&h=56&fit=crop",
-  },
-  {
-    id: 6,
-    name: "Wireless Mouse",
-    category: "Accessories",
-    price: 45.0,
-    status: "Active",
-    stock: 60,
-    image:
-      "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=56&h=56&fit=crop",
-  },
-  {
-    id: 7,
-    name: "Mechanical Keyboard",
-    category: "Computers",
-    price: 95.0,
-    status: "Inactive",
-    stock: 0,
-    image:
-      "https://images.unsplash.com/photo-1595225476474-87563907a212?w=56&h=56&fit=crop",
-  },
-  {
-    id: 8,
-    name: "4K Monitor",
-    category: "Computers",
-    price: 349.0,
-    status: "Active",
-    stock: 8,
-    image:
-      "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=56&h=56&fit=crop",
-  },
-  {
-    id: 9,
-    name: "Bluetooth Speaker",
-    category: "Accessories",
-    price: 75.0,
-    status: "Low Stock",
-    stock: 3,
-    image:
-      "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=56&h=56&fit=crop",
-  },
-  {
-    id: 10,
-    name: "iPad Air",
-    category: "Electronics",
-    price: 599.0,
-    status: "Active",
-    stock: 18,
-    image:
-      "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=56&h=56&fit=crop",
-  },
-  {
-    id: 11,
-    name: "USB-C Hub",
-    category: "Accessories",
-    price: 45.0,
-    status: "Active",
-    stock: 55,
-    image:
-      "https://images.unsplash.com/photo-1625948515291-069c6a821a42?w=56&h=56&fit=crop",
-  },
-  {
-    id: 12,
-    name: "GoPro Max",
-    category: "Cameras",
-    price: 399.0,
-    status: "Active",
-    stock: 9,
-    image:
-      "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=56&h=56&fit=crop",
-  },
-];
+function EditProductModal({ product, onClose, onUpdate }) {
+  const [form, setForm] = useState({
+    name: product.name,
+    category: product.category,
+    price: product.price,
+    stock: product.stock,
+    status: product.status || "Active",
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault(); // Form reload prevent karne ke liye
+    onUpdate(product._id, form);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-800">Edit Product</h2>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Body / Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Product Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Product Name
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Wireless Mouse"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-[#0F3A53] focus:border-transparent outline-none transition-all"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price ($)
+              </label>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-[#0F3A53] focus:border-transparent outline-none transition-all"
+                required
+              />
+            </div>
+
+            {/* Stock */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Stock Units
+              </label>
+              <input
+                type="number"
+                placeholder="0"
+                value={form.stock}
+                onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-[#0F3A53] focus:border-transparent outline-none transition-all"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Status Dropdown (Extra improvement) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-[#0F3A53] outline-none bg-white"
+            >
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Out of Stock">Out of Stock</option>
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 mt-6 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2.5 bg-[#0F3A53] text-white font-medium rounded-lg hover:bg-[#164a69] shadow-md transition-all active:scale-[0.98]"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 const CATEGORIES = [
   "All",
@@ -278,12 +274,28 @@ function AddProductModal({ onClose, onAdd }) {
 
 // ── Main Products Component ──
 export default function Products() {
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState([]);
   const [category, setCategory] = useState("All");
   const [status, setStatus] = useState("All");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
+
+  const [editProduct, setEditProduct] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await API.get("/products");
+      setProducts(res.data.products);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const filtered = products.filter((p) => {
     const matchCat = category === "All" || p.category === category;
@@ -298,13 +310,35 @@ export default function Products() {
     page * ITEMS_PER_PAGE
   );
 
-  const handleAdd = (product) => {
-    setProducts((prev) => [product, ...prev]);
-    setPage(1);
+  const handleAdd = async (product) => {
+    try {
+      const res = await API.post("/products/add", product);
+      setProducts((prev) => [res.data.product, ...prev]);
+      setPage(1);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleDelete = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      await API.delete(`/products/${id}`);
+      setProducts((prev) => prev.filter((p) => p._id !== id));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleUpdate = async (id, updatedData) => {
+    try {
+      const res = await API.put(`/products/${id}`, updatedData);
+
+      setProducts((prev) =>
+        prev.map((p) => (p._id === id ? res.data.product : p))
+      );
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const totalProducts = products.length;
@@ -516,7 +550,7 @@ export default function Products() {
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <span className="font-bold text-[#0F3A53]">
-                          ${product.price.toFixed(2)}
+                          {product.price.toFixed(2)}
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-center">
@@ -544,11 +578,17 @@ export default function Products() {
                       </td>
                       <td className="px-4 py-3.5 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button className="text-xs px-3 py-1.5 rounded-lg border border-[#0F3A53]/30 text-[#0F3A53] hover:bg-[#0F3A53]/10 transition font-medium">
+                          <button
+                            onClick={() => {
+                              setEditProduct(product);
+                              setShowEditModal(true);
+                            }}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-[#0F3A53]/30 text-[#0F3A53] hover:bg-[#0F3A53]/10 transition font-medium"
+                          >
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(product.id)}
+                            onClick={() => handleDelete(product._id)}
                             className="text-xs px-3 py-1.5 rounded-lg border border-[#dc2626]/30 text-[#dc2626] hover:bg-[#dc2626]/10 transition font-medium"
                           >
                             Delete
@@ -612,6 +652,13 @@ export default function Products() {
         <AddProductModal
           onClose={() => setShowModal(false)}
           onAdd={handleAdd}
+        />
+      )}
+      {showEditModal && editProduct && (
+        <EditProductModal
+          product={editProduct}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={handleUpdate}
         />
       )}
     </div>

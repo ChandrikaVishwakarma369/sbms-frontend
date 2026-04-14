@@ -9,7 +9,13 @@ import {
   Mail,
   Building2,
 } from "lucide-react";
-import { getCustomersMock } from "../services/customer.service";
+import { 
+  getCustomers, 
+  getCustomerStats, 
+  createCustomer, 
+  updateCustomer, 
+  deleteCustomer 
+} from "../services/customer.service";
 import MainLayout from "../layout/MainLayout";
 
 const Customers = () => {
@@ -18,35 +24,54 @@ const Customers = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editCustomerId, setEditCustomerId] = useState(null);
+  const [stats, setStats] = useState({
+    totalCustomers: 0,
+    activeCustomers: 0,
+    customersWithGST: 0,
+  });
+  const [gstFilter, setGstFilter] = useState("All"); // All, With GST, Without GST
+  const [gstError, setGstError] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    gst: "",
+    gstNumber: "",
   });
 
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const data = await getCustomersMock();
-        setCustomers(data);
-      } catch (error) {
-        console.error("Failed to load customers:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCustomers();
+    fetchData();
   }, []);
 
-  const filteredCustomers = customers.filter(
-    (c) =>
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [customersData, statsData] = await Promise.all([
+        getCustomers(),
+        getCustomerStats()
+      ]);
+      setCustomers(customersData);
+      setStats(statsData);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredCustomers = customers.filter((c) => {
+    const matchesSearch =
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.phone.includes(searchTerm)
-  );
+      c.phone.includes(searchTerm);
+
+    const matchesGst =
+      gstFilter === "All" ||
+      (gstFilter === "With GST" && c.gstNumber) ||
+      (gstFilter === "Without GST" && !c.gstNumber);
+
+    return matchesSearch && matchesGst;
+  });
 
   const avatarColors = [
     "from-indigo-500 to-purple-600",
@@ -68,8 +93,9 @@ const Customers = () => {
       name: "",
       email: "",
       phone: "",
-      gst: "",
+      gstNumber: "",
     });
+    setGstError("");
     setEditCustomerId(null);
   };
 
@@ -83,43 +109,78 @@ const Customers = () => {
       name: customer.name || "",
       email: customer.email || "",
       phone: customer.phone || "",
-      gst: customer.gst || "",
+      gstNumber: customer.gstNumber || "",
     });
     setEditCustomerId(customer.id);
     setIsAddModalOpen(true);
   };
 
-  const handleSaveCustomer = () => {
-    if (!formData.name || !formData.email || !formData.phone) return;
-
-    if (editCustomerId) {
-      const updated = customers.map((c) =>
-        c.id === editCustomerId
-          ? { ...c, ...formData, status: c.status || "Active" }
-          : c
-      );
-      setCustomers(updated);
-    } else {
-      const newCustomer = {
-        id: Date.now(),
-        ...formData,
-        status: "Active",
-      };
-      setCustomers([...customers, newCustomer]);
+  const handleSaveCustomer = async () => {
+    if (!formData.name || !formData.email || !formData.phone) {
+      alert("Please fill all required fields");
+      return;
     }
 
-    resetCustomerForm();
-    setIsAddModalOpen(false);
+    if (formData.gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(formData.gstNumber)) {
+        setGstError("Invalid GST format (e.g. 22AAAAA0000A1Z5)");
+        return;
+      }
+    }
+    setGstError("");
+
+    try {
+      if (editCustomerId) {
+        const response = await updateCustomer(editCustomerId, formData);
+        if (response.success) {
+          await fetchData(); // Refresh both list and stats
+          setIsAddModalOpen(false);
+          resetCustomerForm();
+        } else {
+          if (response.message?.toLowerCase().includes("gst")) {
+            setGstError(response.message);
+          } else {
+            alert(response.message || "Failed to update customer");
+          }
+        }
+      } else {
+        const response = await createCustomer(formData);
+        if (response.success) {
+          await fetchData();
+          setIsAddModalOpen(false);
+          resetCustomerForm();
+        } else {
+          if (response.message?.toLowerCase().includes("gst")) {
+            setGstError(response.message);
+          } else {
+            alert(response.message || "Failed to add customer");
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error saving customer:", error);
+      alert("Something went wrong while saving.");
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this customer?"
     );
 
     if (confirmDelete) {
-      const updated = customers.filter((c) => c.id !== id);
-      setCustomers(updated);
+      try {
+        const response = await deleteCustomer(id);
+        if (response.success) {
+          await fetchData();
+        } else {
+          alert(response.message || "Failed to delete customer");
+        }
+      } catch (error) {
+        console.error("Error deleting customer:", error);
+        alert("Something went wrong while deleting.");
+      }
     }
   };
 
@@ -155,7 +216,7 @@ const Customers = () => {
           </div>
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">Total Customers</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">{customers.length}</p>
+            <p className="text-2xl font-bold text-slate-800 mt-1">{stats.totalCustomers}</p>
           </div>
         </div>
 
@@ -165,7 +226,7 @@ const Customers = () => {
           </div>
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">Active</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">{customers.length}</p>
+            <p className="text-2xl font-bold text-slate-800 mt-1">{stats.activeCustomers}</p>
           </div>
         </div>
 
@@ -176,7 +237,7 @@ const Customers = () => {
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">With GST</p>
             <p className="text-2xl font-bold text-slate-800 mt-1">
-              {customers.filter((c) => c.gst).length}
+              {stats.customersWithGST}
             </p>
           </div>
         </div>
@@ -205,10 +266,23 @@ const Customers = () => {
 
           </div>
 
-          <button className="flex items-center gap-2 border border-slate-200 px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-            <Filter size={16} />
-            Filter
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+              {["All", "With GST", "Without GST"].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setGstFilter(filter)}
+                  className={`px-3 py-2 text-xs font-medium transition-colors ${
+                    gstFilter === filter
+                      ? "bg-[#0F3A53] text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </div>
 
         </div>
 
@@ -275,12 +349,20 @@ const Customers = () => {
                     </td>
 
                     <td className="px-6 py-4">
-                      {customer.gst ? (
-                        <span className="text-xs bg-slate-200 text-slate-600 px-3 py-1 rounded">
-                          {customer.gst}
-                        </span>
+                      {customer.gstNumber ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium text-slate-700">{customer.gstNumber}</span>
+                          <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full w-fit font-bold uppercase">
+                            GST Registered
+                          </span>
+                        </div>
                       ) : (
-                        "-"
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-400">—</span>
+                          <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full w-fit font-bold uppercase">
+                            Unregistered
+                          </span>
+                        </div>
                       )}
                     </td>
 
@@ -417,12 +499,23 @@ const Customers = () => {
                   GST Number <span className="text-slate-400 font-normal">(optional)</span>
                 </label>
                 <input
-                  name="gst"
-                  value={formData.gst}
-                  onChange={handleChange}
+                  name="gstNumber"
+                  value={formData.gstNumber}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (gstError) setGstError("");
+                  }}
                   placeholder="e.g. 22AAAAA0000A1Z5"
-                  className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
+                  className={`w-full border ${
+                    gstError ? "border-red-500 shadow-sm shadow-red-100" : "border-slate-200"
+                  } rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400 transition-all`}
                 />
+                {gstError && (
+                  <p className="text-red-500 text-xs mt-1 font-medium flex items-center gap-1">
+                    <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+                    {gstError}
+                  </p>
+                )}
               </div>
 
             </div>

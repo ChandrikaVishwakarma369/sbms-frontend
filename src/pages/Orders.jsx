@@ -11,7 +11,7 @@ import {
   Eye,
   Download,
 } from "lucide-react";
-import { getOrdersMock } from "../services/order.service";
+import { getOrdersMock, createOrder, updateOrder, deleteOrder } from "../services/order.service";
 import jsPDF from "jspdf";
 import MainLayout from "../layout/MainLayout";
 
@@ -128,34 +128,50 @@ const Orders = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleSaveOrder = () => {
-    if (!formData.customer || !formData.contact || !formData.product || !formData.amount) return;
-
-    if (editOrderId) {
-      const updated = orders.map((o) =>
-        o.id === editOrderId
-          ? { ...o, ...formData, orderId: o.orderId || Math.floor(1000 + Math.random() * 9000) }
-          : o
-      );
-      setOrders(updated);
-    } else {
-      const newOrder = {
-        id: Date.now(),
-        orderId: Math.floor(1000 + Math.random() * 9000),
-        ...formData,
-      };
-      setOrders([...orders, newOrder]);
+  const handleSaveOrder = async () => {
+    if (!formData.customer || !formData.contact || !formData.product || !formData.amount) {
+      alert("Please fill in all required fields");
+      return;
     }
 
-    resetOrderForm();
-    setIsAddModalOpen(false);
+    try {
+      if (editOrderId) {
+        // Update existing order
+        await updateOrder(editOrderId, formData);
+        const updated = orders.map((o) =>
+          o.id === editOrderId
+            ? { ...o, ...formData }
+            : o
+        );
+        setOrders(updated);
+      } else {
+        // Create new order
+        const newOrder = await createOrder(formData);
+        setOrders([...orders, newOrder]);
+      }
+
+      resetOrderForm();
+      setIsAddModalOpen(false);
+      alert(editOrderId ? "Order updated successfully!" : "Order created successfully!");
+    } catch (error) {
+      console.error("Error saving order:", error);
+      const errorMessage = error.message || "Error saving order. Please try again.";
+      alert(`❌ ${errorMessage}\n\nCheck browser console for details. Make sure backend is running on http://localhost:5000`);
+    }
   };
 
   // ❌ DELETE
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const confirmDelete = window.confirm("Delete this order?");
     if (confirmDelete) {
-      setOrders(orders.filter((o) => o.id !== id));
+      try {
+        await deleteOrder(id);
+        setOrders(orders.filter((o) => o.id !== id));
+        alert("Order deleted successfully!");
+      } catch (error) {
+        console.error("Error deleting order:", error);
+        alert("Error deleting order. Please try again.");
+      }
     }
   };
 
