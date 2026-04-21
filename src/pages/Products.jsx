@@ -185,24 +185,9 @@ function AddProductModal({ onClose, onAdd }) {
 
         <div className="space-y-4">
           {[
-            {
-              label: "Product Name",
-              key: "name",
-              type: "text",
-              placeholder: "Enter product name",
-            },
-            {
-              label: "Price ($)",
-              key: "price",
-              type: "number",
-              placeholder: "0.00",
-            },
-            {
-              label: "Stock Quantity",
-              key: "stock",
-              type: "number",
-              placeholder: "0",
-            },
+            { label: "Product Name", key: "name", type: "text", placeholder: "Enter product name" },
+            { label: "Price (₹)", key: "price", type: "number", placeholder: "0.00" },
+            { label: "Stock Quantity", key: "stock", type: "number", placeholder: "0" },
           ].map(({ label, key, type, placeholder }) => (
             <div key={key}>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">

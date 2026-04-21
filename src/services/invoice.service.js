@@ -1,35 +1,106 @@
-import { invoicesMock } from "../../public/mock/invoices.js";
+const API_URL = "http://localhost:5000/api/invoices";
 
-// ✅ Same logic jo frontend pe hai — agar dueDate nikal gayi aur PENDING hai toh OVERDUE
-const getEffectiveStatus = (inv) => {
-  if (
-    inv.status === "PENDING" &&
-    inv.dueDate &&
-    new Date(inv.dueDate) < new Date(new Date().toDateString())
-  ) {
-    return "OVERDUE";
+// ✅ Token helper — localStorage se JWT lena
+const getAuthHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+});
+
+// ─── GET ALL INVOICES ─────────────────────────────────────────────────────────
+export const getInvoices = async ({ search = "", status = "", page = 1, limit = 10 } = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (search.trim()) params.append("search", search.trim());
+    if (status && status !== "All Status") params.append("status", status);
+    params.append("page", page);
+    params.append("limit", limit);
+
+    const response = await fetch(`${API_URL}?${params.toString()}`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+    return data.success
+      ? { invoices: data.data, pagination: data.pagination }
+      : { invoices: [], pagination: null };
+  } catch (error) {
+    console.error("Error fetching invoices:", error);
+    return { invoices: [], pagination: null };
   }
-  return inv.status;
 };
 
-// Mock data return
-export const getInvoices = () => {
-  return invoicesMock;
+// ─── GET STATS ────────────────────────────────────────────────────────────────
+export const getInvoiceStats = async () => {
+  try {
+    const response = await fetch(`${API_URL}/stats`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+    return data.success
+      ? data.data
+      : { totalPaid: 0, totalPending: 0, totalOverdue: 0 };
+  } catch (error) {
+    console.error("Error fetching invoice stats:", error);
+    return { totalPaid: 0, totalPending: 0, totalOverdue: 0 };
+  }
 };
 
-// Stats calculate — ab effective status se hoga, sirf stored status se nahi
-export const getInvoiceStats = (invoices) => {
-  const totalPaid = invoices
-    .filter((inv) => getEffectiveStatus(inv) === "PAID")
-    .reduce((sum, inv) => sum + inv.total, 0);
+// ─── GET SINGLE ───────────────────────────────────────────────────────────────
+export const getInvoiceById = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+    return data.success ? data.data : null;
+  } catch (error) {
+    console.error("Error fetching invoice:", error);
+    return null;
+  }
+};
 
-  const totalPending = invoices
-    .filter((inv) => getEffectiveStatus(inv) === "PENDING")
-    .reduce((sum, inv) => sum + inv.total, 0);
+// ─── CREATE INVOICE ───────────────────────────────────────────────────────────
+export const createInvoice = async (invoiceData) => {
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(invoiceData),
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error creating invoice:", error);
+    throw error;
+  }
+};
 
-  const totalOverdue = invoices
-    .filter((inv) => getEffectiveStatus(inv) === "OVERDUE")
-    .reduce((sum, inv) => sum + inv.total, 0);
+// ─── UPDATE INVOICE ───────────────────────────────────────────────────────────
+export const updateInvoice = async (id, invoiceData) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(invoiceData),
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error updating invoice:", error);
+    throw error;
+  }
+};
 
-  return { totalPaid, totalPending, totalOverdue };
+// ─── DELETE INVOICE ───────────────────────────────────────────────────────────
+export const deleteInvoice = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error deleting invoice:", error);
+    throw error;
+  }
 };
