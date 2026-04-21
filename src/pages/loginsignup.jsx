@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-
 const API_URL = "http://localhost:5000/api/auth";
+import axios from "axios";
 
 const LoginSignup = () => {
   const [isLogin, setIsLogin] = useState(true);
