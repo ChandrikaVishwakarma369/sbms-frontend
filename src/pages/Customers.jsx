@@ -578,7 +578,7 @@ const Customers = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
-                  Business Name
+                  Customer Name
                 </label>
                 <input
                   name="name"

@@ -69,10 +69,10 @@ const SettingsPage = () => {
           </div>
           <div className="flex-1">
             <h3 className="text-base font-bold text-gray-800 leading-tight">
-              Sandeep Bhardwaj
+              {JSON.parse(localStorage.getItem("user"))?.name || "User"}
             </h3>
             <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              Account Administrator
+              {JSON.parse(localStorage.getItem("user"))?.role || "Employee"}
             </p>
             <div className="mt-2 flex gap-3">
               <button
