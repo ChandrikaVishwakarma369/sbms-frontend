@@ -10,15 +10,20 @@ import {
   Clock,
   Eye,
   Download,
+  ChevronDown,
+  Check,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
-import {
-  getOrdersMock,
-  createOrder,
-  updateOrder,
-  deleteOrder,
-} from "../services/order.service";
+import { getOrdersMock, createOrder, updateOrder, deleteOrder } from "../services/order.service";
+import { phone } from "phone";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import MainLayout from "../layout/MainLayout";
+import ConfirmationModal from "../components/ConfirmationModal";
+import API from "../utils/api";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -28,21 +33,29 @@ const Orders = () => {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [editOrderId, setEditOrderId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
 
   const [formData, setFormData] = useState({
-    customer: "",
+    customerId: "",
     contact: "",
-    product: "",
+    productId: "",
+    quantity: 1,
     date: "",
     address: "",
-    amount: "",
     status: "Pending",
   });
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const data = await getOrdersMock();
+        setIsLoading(true);
+        const data = await getOrdersMock(statusFilter);
         setOrders(data);
       } catch (err) {
         console.error("Error loading orders", err);
@@ -51,8 +64,22 @@ const Orders = () => {
       }
     };
 
+    const fetchCustomersAndProducts = async () => {
+      try {
+        const [custRes, prodRes] = await Promise.all([
+          API.get("/customers"),
+          API.get("/products")
+        ]);
+        setCustomers(custRes.data.data || []);
+        setProducts(prodRes.data.products || []);
+      } catch (err) {
+        console.error("Error loading customers/products", err);
+      }
+    };
+
     fetchOrders();
-  }, []);
+    fetchCustomersAndProducts();
+  }, [statusFilter]);
 
   // 🔍 FILTER
   const filteredOrders = orders.filter(
@@ -95,20 +122,32 @@ const Orders = () => {
 
   // 🧾 FORM HANDLE
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    if (name === "customerId") {
+      const selectedCust = customers.find(c => c.id === value);
+      setFormData({
+        ...formData,
+        customerId: value,
+        contact: selectedCust?.phone || "",
+        address: selectedCust?.address || ""
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const resetOrderForm = () => {
     setFormData({
-      customer: "",
+      customerId: "",
       contact: "",
-      product: "",
-      date: "",
+      productId: "",
+      quantity: 1,
+      date: new Date().toISOString().split('T')[0],
       address: "",
-      amount: "",
       status: "Pending",
     });
     setEditOrderId(null);
@@ -121,12 +160,12 @@ const Orders = () => {
 
   const handleEditOrder = (order) => {
     setFormData({
-      customer: order.customer || "",
+      customerId: order.customerId || "",
       contact: order.contact || "",
-      product: order.product || "",
+      productId: order.productId || "",
+      quantity: order.quantity || 1,
       date: order.date || "",
       address: order.address || "",
-      amount: order.amount || "",
       status: order.status || "Pending",
     });
     setEditOrderId(order.id);
@@ -134,59 +173,69 @@ const Orders = () => {
   };
 
   const handleSaveOrder = async () => {
-    if (
-      !formData.customer ||
-      !formData.contact ||
-      !formData.product ||
-      !formData.amount
-    ) {
-      alert("Please fill in all required fields");
+    if (!formData.customerId || !formData.contact || !formData.productId || !formData.quantity) {
+      toast.error("Please fill in all required fields");
       return;
     }
+
+    // Contact Validation & Normalization (adding + if missing)
+    const phoneToValidate = formData.contact.startsWith("+") ? formData.contact : `+${formData.contact}`;
+    const phoneResult = phone(phoneToValidate, { country: "IND" });
+    if (!phoneResult.isValid) {
+      toast.error("Please enter a valid contact number");
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      contact: phoneResult.phoneNumber // Normalized to E.164 format
+    };
 
     try {
       if (editOrderId) {
         // Update existing order
-        await updateOrder(editOrderId, formData);
+        await updateOrder(editOrderId, payload);
         const updated = orders.map((o) =>
-          o.id === editOrderId ? { ...o, ...formData } : o
+          o.id === editOrderId
+            ? { ...o, ...payload }
+            : o
         );
         setOrders(updated);
       } else {
         // Create new order
-        const newOrder = await createOrder(formData);
+        const newOrder = await createOrder(payload);
         setOrders([...orders, newOrder]);
       }
 
       resetOrderForm();
       setIsAddModalOpen(false);
-      alert(
-        editOrderId
-          ? "Order updated successfully!"
-          : "Order created successfully!"
-      );
+      toast.success(editOrderId ? "Order updated successfully!" : "Order created successfully!");
     } catch (error) {
       console.error("Error saving order:", error);
-      const errorMessage =
-        error.message || "Error saving order. Please try again.";
-      alert(
-        `❌ ${errorMessage}\n\nCheck browser console for details. Make sure backend is running on http://localhost:5000`
-      );
+      const errorMessage = error.message || "Error saving order. Please try again.";
+      toast.error(`❌ ${errorMessage}`);
     }
   };
 
   // ❌ DELETE
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Delete this order?");
-    if (confirmDelete) {
-      try {
-        await deleteOrder(id);
-        setOrders(orders.filter((o) => o.id !== id));
-        alert("Order deleted successfully!");
-      } catch (error) {
-        console.error("Error deleting order:", error);
-        alert("Error deleting order. Please try again.");
-      }
+  const handleDeleteClick = (order) => {
+    setOrderToDelete(order);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!orderToDelete) return;
+
+    try {
+      await deleteOrder(orderToDelete.id);
+      setOrders(orders.filter((o) => o.id !== orderToDelete.id));
+      toast.success("Order deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("Error deleting order. Please try again.");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setOrderToDelete(null);
     }
   };
 
@@ -231,6 +280,9 @@ const Orders = () => {
     y += lineHeight;
 
     addLine("Product", order.product, y);
+    y += lineHeight;
+
+    addLine("Quantity", order.quantity, y);
     y += lineHeight;
 
     addLine("Date", order.date, y);
@@ -331,57 +383,78 @@ const Orders = () => {
             />
           </div>
 
-          <button className="flex items-center gap-2 border border-slate-200 px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-            <Filter size={16} />
-            Filter
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center gap-2 border ${
+                statusFilter !== "All"
+                  ? "border-[#0F3A53] bg-blue-50 text-[#0F3A53]"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              } px-4 py-2 rounded-lg text-sm transition-all`}
+            >
+              <Filter size={16} />
+              {statusFilter === "All" ? "Filter" : statusFilter}
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsFilterOpen(false)}
+                ></div>
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-2">
+                  {["All", "Pending", "Shipped", "Delivered", "Cancelled"].map(
+                    (status) => (
+                      <button
+                        key={status}
+                        onClick={() => {
+                          setStatusFilter(status);
+                          setIsFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                          statusFilter === status
+                            ? "text-[#0F3A53] font-bold bg-blue-50/50"
+                            : "text-slate-600"
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    )
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* TABLE */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
               <tr>
-                <th className="text-left px-6 py-3 border-b border-slate-200">
-                  Order ID
-                </th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">
-                  Customer
-                </th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">
-                  Contact
-                </th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">
-                  Product
-                </th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">
-                  Date
-                </th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">
-                  Address
-                </th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">
-                  Amount
-                </th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">
-                  Status
-                </th>
-                <th className="text-right px-6 py-3 border-b border-slate-200">
-                  Actions
-                </th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Order ID</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Customer</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Contact</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Product</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Qty</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Date</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Address</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Amount</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Status</th>
+                <th className="text-right px-6 py-3 border-b border-slate-200">Actions</th>
               </tr>
             </thead>
 
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-10 text-slate-500">
+                  <td colSpan="10" className="text-center py-10 text-slate-500">
                     Loading orders...
                   </td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-10 text-slate-500">
+                  <td colSpan="10" className="text-center py-10 text-slate-500">
                     No orders found
                   </td>
                 </tr>
@@ -406,6 +479,8 @@ const Orders = () => {
                     <td className="px-6 py-4 text-slate-600">
                       {order.product}
                     </td>
+
+                    <td className="px-6 py-4 text-slate-600 font-semibold">{order.quantity}</td>
 
                     <td className="px-6 py-4 text-slate-600">{order.date}</td>
 
@@ -458,7 +533,7 @@ const Orders = () => {
                         </button>
 
                         <button
-                          onClick={() => handleDelete(order.id)}
+                          onClick={() => handleDeleteClick(order)}
                           className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded"
                         >
                           <Trash2 size={16} />
@@ -523,25 +598,34 @@ const Orders = () => {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Customer
                   </label>
-                  <input
-                    name="customer"
-                    placeholder="Customer name"
-                    value={formData.customer}
+                  <select
+                    name="customerId"
+                    value={formData.customerId}
                     onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
-                  />
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  >
+                    <option value="">Select Customer</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.gstNumber ? "(GST)" : "(No GST)"}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Contact
                   </label>
-                  <input
-                    name="contact"
-                    placeholder="Contact number"
+                  <PhoneInput
+                    country={"in"}
                     value={formData.contact}
-                    onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
+                    onChange={(contact) => setFormData({ ...formData, contact })}
+                    containerClass="!w-full"
+                    inputClass="!w-full !py-3 !pl-12 !pr-4 !text-sm !border-slate-200 !rounded-lg focus:!ring-2 focus:!ring-indigo-500 !outline-none !bg-white !placeholder-slate-400"
+                    buttonClass="!bg-white !border-slate-200 !rounded-l-lg"
+                    dropdownClass="!bg-white !border-slate-200 !rounded-lg !shadow-xl"
+                    placeholder="Enter contact number"
                   />
                 </div>
               </div>
@@ -551,13 +635,19 @@ const Orders = () => {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Product
                   </label>
-                  <input
-                    name="product"
-                    placeholder="Product name"
-                    value={formData.product}
+                  <select
+                    name="productId"
+                    value={formData.productId}
                     onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
-                  />
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  >
+                    <option value="">Select Product</option>
+                    {products.map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.name} (₹{p.price})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -574,6 +664,73 @@ const Orders = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+                    Quantity
+                  </label>
+                  <input
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+                    Status
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsStatusOpen(!isStatusOpen)}
+                      className="w-full flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all hover:border-slate-300"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${getStatusDotStyle(formData.status)}`}></span>
+                        <span className="font-medium text-slate-700">{formData.status}</span>
+                      </div>
+                      <ChevronDown size={16} className={`text-slate-400 transition-transform ${isStatusOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {isStatusOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setIsStatusOpen(false)}></div>
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl z-20 overflow-hidden py-1 transform origin-top animate-in fade-in zoom-in duration-200">
+                          {[
+                            { name: "Pending", icon: <Clock size={14} className="text-yellow-600" /> },
+                            { name: "Shipped", icon: <Truck size={14} className="text-green-600" /> },
+                            { name: "Delivered", icon: <CheckCircle size={14} className="text-blue-600" /> },
+                            { name: "Cancelled", icon: <XCircle size={14} className="text-red-600" /> }
+                          ].map((status) => (
+                            <button
+                              key={status.name}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, status: status.name });
+                                setIsStatusOpen(false);
+                              }}
+                              className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                {status.icon}
+                                <span className={`${formData.status === status.name ? "text-[#0F3A53] font-bold" : "text-slate-600"}`}>
+                                  {status.name}
+                                </span>
+                              </div>
+                              {formData.status === status.name && <Check size={14} className="text-[#0F3A53]" />}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                   Address
@@ -587,36 +744,19 @@ const Orders = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
-                    Amount
-                  </label>
-                  <input
-                    name="amount"
-                    type="number"
-                    placeholder="e.g. 3000"
-                    value={formData.amount}
-                    onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
-                  />
+              {/* LIVE PREVIEW SECTION */}
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Subtotal</span>
+                  <span className="font-semibold text-slate-700">₹{(products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0)}</span>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                  >
-                    <option>Pending</option>
-                    <option>Shipped</option>
-                    <option>Delivered</option>
-                    <option>Cancelled</option>
-                  </select>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">GST ({(customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0}%)</span>
+                  <span className="font-semibold text-slate-700">₹{((products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0) * ((customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0) / 100).toFixed(2)}</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2 flex justify-between text-base">
+                  <span className="font-bold text-slate-800">Total Amount</span>
+                  <span className="font-bold text-[#0F3A53]">₹{((products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0) * (1 + ((customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0) / 100)).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -700,6 +840,13 @@ const Orders = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+                  Quantity
+                </label>
+                <p className="text-sm text-slate-600">{selectedOrder.quantity}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Date
                 </label>
                 <p className="text-sm text-slate-600">{selectedOrder.date}</p>
@@ -753,6 +900,16 @@ const Orders = () => {
           </div>
         </div>
       )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Order"
+        message={`Are you sure you want to delete order #${orderToDelete?.orderId} for "${orderToDelete?.customer}"? This action cannot be undone.`}
+        confirmText="Delete Order"
+      />
     </div>
   );
 };

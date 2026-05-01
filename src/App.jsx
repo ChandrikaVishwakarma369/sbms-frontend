@@ -10,10 +10,33 @@ import MainLayout from "./layout/MainLayout";
 import SettingsPage from "./pages/Settings";
 import Report from "./pages/Report";
 import Orders from "./pages/Orders";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
-    <Routes>
+    <>
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#ffffff',
+            color: '#0F3A53',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#0F3A53',
+              secondary: '#fff',
+            },
+          },
+        }} 
+      />
+      <Routes>
       {/* Layout Routes */}
       <Route element={<MainLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
@@ -31,7 +54,8 @@ function App() {
 
       {/* Default routes */}
       <Route path="/" element={<Navigate to="/login" />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
 

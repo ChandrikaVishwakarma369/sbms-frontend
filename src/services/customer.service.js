@@ -1,8 +1,18 @@
 const API_URL = "http://localhost:5000/api/customers";
 
-export const getCustomers = async () => {
+export const getCustomers = async (status, gst) => {
   try {
-    const response = await fetch(API_URL);
+    let url = API_URL;
+    const params = new URLSearchParams();
+    
+    if (status && status !== "All") params.append("status", status);
+    if (gst === "true" || gst === "false") params.append("gst", gst);
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const response = await fetch(url);
     const data = await response.json();
     return data.success ? data.data : [];
   } catch (error) {
