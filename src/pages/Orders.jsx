@@ -11,7 +11,12 @@ import {
   Eye,
   Download,
 } from "lucide-react";
-import { getOrdersMock, createOrder, updateOrder, deleteOrder } from "../services/order.service";
+import {
+  getOrdersMock,
+  createOrder,
+  updateOrder,
+  deleteOrder,
+} from "../services/order.service";
 import jsPDF from "jspdf";
 import MainLayout from "../layout/MainLayout";
 
@@ -52,9 +57,9 @@ const Orders = () => {
   // 🔍 FILTER
   const filteredOrders = orders.filter(
     (o) =>
-      o.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.orderId.toString().includes(searchTerm)
+      (o.customer || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (o.status || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (o.orderId || "").toString().includes(searchTerm)
   );
 
   // 🎨 STATUS STYLE
@@ -129,7 +134,12 @@ const Orders = () => {
   };
 
   const handleSaveOrder = async () => {
-    if (!formData.customer || !formData.contact || !formData.product || !formData.amount) {
+    if (
+      !formData.customer ||
+      !formData.contact ||
+      !formData.product ||
+      !formData.amount
+    ) {
       alert("Please fill in all required fields");
       return;
     }
@@ -139,9 +149,7 @@ const Orders = () => {
         // Update existing order
         await updateOrder(editOrderId, formData);
         const updated = orders.map((o) =>
-          o.id === editOrderId
-            ? { ...o, ...formData }
-            : o
+          o.id === editOrderId ? { ...o, ...formData } : o
         );
         setOrders(updated);
       } else {
@@ -152,11 +160,18 @@ const Orders = () => {
 
       resetOrderForm();
       setIsAddModalOpen(false);
-      alert(editOrderId ? "Order updated successfully!" : "Order created successfully!");
+      alert(
+        editOrderId
+          ? "Order updated successfully!"
+          : "Order created successfully!"
+      );
     } catch (error) {
       console.error("Error saving order:", error);
-      const errorMessage = error.message || "Error saving order. Please try again.";
-      alert(`❌ ${errorMessage}\n\nCheck browser console for details. Make sure backend is running on http://localhost:5000`);
+      const errorMessage =
+        error.message || "Error saving order. Please try again.";
+      alert(
+        `❌ ${errorMessage}\n\nCheck browser console for details. Make sure backend is running on http://localhost:5000`
+      );
     }
   };
 
@@ -246,7 +261,6 @@ const Orders = () => {
 
   return (
     <div className="flex flex-col gap-6 w-full p-8 bg-slate-50 min-h-screen">
-
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
@@ -267,16 +281,13 @@ const Orders = () => {
 
       {/* STATS */}
       <div className="grid md:grid-cols-3 gap-6">
-
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex items-center gap-4">
           <div className="bg-indigo-100 p-3 rounded-lg">
             <ShoppingCart className="text-indigo-600" size={20} />
           </div>
           <div>
             <p className="text-xs text-slate-400 uppercase">Total Orders</p>
-            <p className="text-2xl font-bold text-slate-800">
-              {orders.length}
-            </p>
+            <p className="text-2xl font-bold text-slate-800">{orders.length}</p>
           </div>
         </div>
 
@@ -303,12 +314,10 @@ const Orders = () => {
             </p>
           </div>
         </div>
-
       </div>
 
       {/* TABLE CARD */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-
         {/* SEARCH */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center border border-slate-200 rounded-lg px-3 py-2 w-80 bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-500">
@@ -331,23 +340,39 @@ const Orders = () => {
         {/* TABLE */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
               <tr>
-                <th className="text-left px-6 py-3 border-b border-slate-200">Order ID</th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">Customer</th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">Contact</th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">Product</th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">Date</th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">Address</th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">Amount</th>
-                <th className="text-left px-6 py-3 border-b border-slate-200">Status</th>
-                <th className="text-right px-6 py-3 border-b border-slate-200">Actions</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">
+                  Order ID
+                </th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">
+                  Customer
+                </th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">
+                  Contact
+                </th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">
+                  Product
+                </th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">
+                  Date
+                </th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">
+                  Address
+                </th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">
+                  Amount
+                </th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">
+                  Status
+                </th>
+                <th className="text-right px-6 py-3 border-b border-slate-200">
+                  Actions
+                </th>
               </tr>
             </thead>
 
             <tbody>
-
               {isLoading ? (
                 <tr>
                   <td colSpan="9" className="text-center py-10 text-slate-500">
@@ -362,17 +387,25 @@ const Orders = () => {
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-slate-200 odd:bg-white even:bg-slate-50 hover:bg-slate-100">
-
+                  <tr
+                    key={order.id}
+                    className="border-b border-slate-200 odd:bg-white even:bg-slate-50 hover:bg-slate-100"
+                  >
                     <td className="px-6 py-4 font-medium text-slate-600">
                       #{order.orderId}
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600">{order.customer}</td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {order.customer}
+                    </td>
 
-                    <td className="px-6 py-4 text-slate-600">{order.contact}</td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {order.contact}
+                    </td>
 
-                    <td className="px-6 py-4 text-slate-600">{order.product}</td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {order.product}
+                    </td>
 
                     <td className="px-6 py-4 text-slate-600">{order.date}</td>
 
@@ -385,8 +418,16 @@ const Orders = () => {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full ${getStatusStyle(order.status)}`}>
-                        <span className={`w-2 h-2 rounded-full ${getStatusDotStyle(order.status)}`}></span>
+                      <span
+                        className={`inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full ${getStatusStyle(
+                          order.status
+                        )}`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${getStatusDotStyle(
+                            order.status
+                          )}`}
+                        ></span>
                         {order.status}
                       </span>
                     </td>
@@ -424,11 +465,9 @@ const Orders = () => {
                         </button>
                       </div>
                     </td>
-
                   </tr>
                 ))
               )}
-
             </tbody>
           </table>
         </div>
@@ -436,7 +475,9 @@ const Orders = () => {
         {/* PAGINATION */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-white">
           <p className="text-sm text-slate-500">
-            Showing <span className="font-semibold">{filteredOrders.length}</span> of <span className="font-semibold">{orders.length}</span> orders
+            Showing{" "}
+            <span className="font-semibold">{filteredOrders.length}</span> of{" "}
+            <span className="font-semibold">{orders.length}</span> orders
           </p>
           <div className="flex items-center gap-2">
             <button className="px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-50">
@@ -450,15 +491,12 @@ const Orders = () => {
             </button>
           </div>
         </div>
-
       </div>
 
       {/* ADD ORDER MODAL */}
       {isAddModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-
           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8 space-y-6">
-
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
@@ -480,7 +518,6 @@ const Orders = () => {
             </div>
 
             <div className="space-y-5">
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
@@ -582,7 +619,6 @@ const Orders = () => {
                   </select>
                 </div>
               </div>
-
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
@@ -600,7 +636,6 @@ const Orders = () => {
                 {editOrderId ? "Update Order" : "Save Order"}
               </button>
             </div>
-
           </div>
         </div>
       )}
@@ -608,12 +643,12 @@ const Orders = () => {
       {/* ORDER DETAILS MODAL */}
       {isOrderModalOpen && selectedOrder && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 space-y-6">
-
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">Order Details</h2>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Order Details
+                </h2>
                 <p className="text-sm text-slate-400 mt-1">
                   Details for Order #{selectedOrder.orderId}
                 </p>
@@ -631,28 +666,36 @@ const Orders = () => {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Order ID
                 </label>
-                <p className="text-sm text-slate-600">#{selectedOrder.orderId}</p>
+                <p className="text-sm text-slate-600">
+                  #{selectedOrder.orderId}
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Customer
                 </label>
-                <p className="text-sm text-slate-600">{selectedOrder.customer}</p>
+                <p className="text-sm text-slate-600">
+                  {selectedOrder.customer}
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Contact
                 </label>
-                <p className="text-sm text-slate-600">{selectedOrder.contact}</p>
+                <p className="text-sm text-slate-600">
+                  {selectedOrder.contact}
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Product
                 </label>
-                <p className="text-sm text-slate-600">{selectedOrder.product}</p>
+                <p className="text-sm text-slate-600">
+                  {selectedOrder.product}
+                </p>
               </div>
 
               <div>
@@ -666,22 +709,34 @@ const Orders = () => {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Address
                 </label>
-                <p className="text-sm text-slate-600">{selectedOrder.address}</p>
+                <p className="text-sm text-slate-600">
+                  {selectedOrder.address}
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Amount
                 </label>
-                <p className="text-sm text-slate-600">₹{selectedOrder.amount}</p>
+                <p className="text-sm text-slate-600">
+                  ₹{selectedOrder.amount}
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Status
                 </label>
-                <span className={`inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full ${getStatusStyle(selectedOrder.status)}`}>
-                  <span className={`w-2 h-2 rounded-full ${getStatusDotStyle(selectedOrder.status)}`}></span>
+                <span
+                  className={`inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full ${getStatusStyle(
+                    selectedOrder.status
+                  )}`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${getStatusDotStyle(
+                      selectedOrder.status
+                    )}`}
+                  ></span>
                   {selectedOrder.status}
                 </span>
               </div>
@@ -695,11 +750,9 @@ const Orders = () => {
                 Close
               </button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 };
