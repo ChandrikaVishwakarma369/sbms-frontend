@@ -9,6 +9,7 @@ function EditProductModal({ product, onClose, onUpdate }) {
     category: product.category,
     price: product.price,
     stock: product.stock,
+    gst: product.gst || 0,
     status: product.status || "Active",
   });
 
@@ -81,20 +82,37 @@ function EditProductModal({ product, onClose, onUpdate }) {
             </div>
           </div>
 
-          {/* Status Dropdown (Extra improvement) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-[#0F3A53] outline-none bg-white"
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Out of Stock">Out of Stock</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            {/* GST */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                GST (%)
+              </label>
+              <input
+                type="number"
+                placeholder="0"
+                value={form.gst}
+                onChange={(e) => setForm({ ...form, gst: e.target.value })}
+                className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-[#0F3A53] focus:border-transparent outline-none transition-all"
+                required
+              />
+            </div>
+
+            {/* Status Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+                className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-[#0F3A53] outline-none bg-white"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Out of Stock">Out of Stock</option>
+              </select>
+            </div>
           </div>
 
           {/* Action Buttons */}
@@ -151,16 +169,18 @@ function AddProductModal({ onClose, onAdd }) {
     category: "Electronics",
     price: "",
     stock: "",
+    gst: "",
     status: "Active",
   });
 
   const handleSubmit = () => {
-    if (!form.name.trim() || !form.price) return;
+    if (!form.name.trim() || !form.price || !form.gst) return;
     onAdd({
       ...form,
       id: Date.now(),
       price: parseFloat(form.price),
       stock: parseInt(form.stock) || 0,
+      gst: parseFloat(form.gst) || 0,
       image:
         "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=56&h=56&fit=crop",
     });
@@ -188,6 +208,7 @@ function AddProductModal({ onClose, onAdd }) {
             { label: "Product Name", key: "name", type: "text", placeholder: "Enter product name" },
             { label: "Price (₹)", key: "price", type: "number", placeholder: "0.00" },
             { label: "Stock Quantity", key: "stock", type: "number", placeholder: "0" },
+            { label: "GST (%)", key: "gst", type: "number", placeholder: "0" },
           ].map(({ label, key, type, placeholder }) => (
             <div key={key}>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
@@ -487,6 +508,9 @@ export default function Products() {
                   Stock
                 </th>
                 <th className="text-center px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  GST %
+                </th>
+                <th className="text-center px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="text-center px-4 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -508,7 +532,7 @@ export default function Products() {
                     statusConfig[product.status] || statusConfig["Inactive"];
                   return (
                     <tr
-                      key={product.id}
+                  key={product._id}
                       className="hover:bg-slate-50 transition-colors"
                     >
                       <td className="px-4 py-3.5">
@@ -535,7 +559,7 @@ export default function Products() {
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <span className="font-bold text-[#0F3A53]">
-                          {product.price.toFixed(2)}
+                        {product.price.toFixed(2)} 
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-center">
@@ -549,6 +573,11 @@ export default function Products() {
                           }`}
                         >
                           {product.stock}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className="font-semibold text-gray-500">
+                          {product.gst || 0}%
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-center">

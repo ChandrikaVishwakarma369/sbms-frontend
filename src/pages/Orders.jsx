@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import MainLayout from "../layout/MainLayout";
 import ConfirmationModal from "../components/ConfirmationModal";
+import API from "../utils/api";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -37,14 +38,16 @@ const Orders = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
 
   const [formData, setFormData] = useState({
-    customer: "",
+    customerId: "",
     contact: "",
-    product: "",
+    productId: "",
+    quantity: 1,
     date: "",
     address: "",
-    amount: "",
     status: "Pending",
   });
 
@@ -61,7 +64,21 @@ const Orders = () => {
       }
     };
 
+    const fetchCustomersAndProducts = async () => {
+      try {
+        const [custRes, prodRes] = await Promise.all([
+          API.get("/customers"),
+          API.get("/products")
+        ]);
+        setCustomers(custRes.data.data || []);
+        setProducts(prodRes.data.products || []);
+      } catch (err) {
+        console.error("Error loading customers/products", err);
+      }
+    };
+
     fetchOrders();
+    fetchCustomersAndProducts();
   }, [statusFilter]);
 
   // 🔍 FILTER
@@ -107,20 +124,32 @@ const Orders = () => {
 
   // 🧾 FORM HANDLE
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    if (name === "customerId") {
+      const selectedCust = customers.find(c => c.id === value);
+      setFormData({
+        ...formData,
+        customerId: value,
+        contact: selectedCust?.phone || "",
+        address: selectedCust?.address || ""
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const resetOrderForm = () => {
     setFormData({
-      customer: "",
+      customerId: "",
       contact: "",
-      product: "",
-      date: "",
+      productId: "",
+      quantity: 1,
+      date: new Date().toISOString().split('T')[0],
       address: "",
-      amount: "",
       status: "Pending",
     });
     setEditOrderId(null);
@@ -133,12 +162,12 @@ const Orders = () => {
 
   const handleEditOrder = (order) => {
     setFormData({
-      customer: order.customer || "",
+      customerId: order.customerId || "",
       contact: order.contact || "",
-      product: order.product || "",
+      productId: order.productId || "",
+      quantity: order.quantity || 1,
       date: order.date || "",
       address: order.address || "",
-      amount: order.amount || "",
       status: order.status || "Pending",
     });
     setEditOrderId(order.id);
@@ -146,7 +175,7 @@ const Orders = () => {
   };
 
   const handleSaveOrder = async () => {
-    if (!formData.customer || !formData.contact || !formData.product || !formData.amount) {
+    if (!formData.customerId || !formData.contact || !formData.productId || !formData.quantity) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -253,6 +282,9 @@ const Orders = () => {
     y += lineHeight;
 
     addLine("Product", order.product, y);
+    y += lineHeight;
+
+    addLine("Quantity", order.quantity, y);
     y += lineHeight;
 
     addLine("Date", order.date, y);
@@ -413,6 +445,7 @@ const Orders = () => {
                 <th className="text-left px-6 py-3 border-b border-slate-200">Customer</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">Contact</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">Product</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Qty</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">Date</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">Address</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">Amount</th>
@@ -425,13 +458,13 @@ const Orders = () => {
 
               {isLoading ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-10 text-slate-500">
+                  <td colSpan="10" className="text-center py-10 text-slate-500">
                     Loading orders...
                   </td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-10 text-slate-500">
+                  <td colSpan="10" className="text-center py-10 text-slate-500">
                     No orders found
                   </td>
                 </tr>
@@ -448,6 +481,8 @@ const Orders = () => {
                     <td className="px-6 py-4 text-slate-600">{order.contact}</td>
 
                     <td className="px-6 py-4 text-slate-600">{order.product}</td>
+
+                    <td className="px-6 py-4 text-slate-600 font-semibold">{order.quantity}</td>
 
                     <td className="px-6 py-4 text-slate-600">{order.date}</td>
 
@@ -561,13 +596,19 @@ const Orders = () => {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Customer
                   </label>
-                  <input
-                    name="customer"
-                    placeholder="Customer name"
-                    value={formData.customer}
+                  <select
+                    name="customerId"
+                    value={formData.customerId}
                     onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
-                  />
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  >
+                    <option value="">Select Customer</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.gstNumber ? "(GST)" : "(No GST)"}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -592,13 +633,19 @@ const Orders = () => {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Product
                   </label>
-                  <input
-                    name="product"
-                    placeholder="Product name"
-                    value={formData.product}
+                  <select
+                    name="productId"
+                    value={formData.productId}
                     onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
-                  />
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  >
+                    <option value="">Select Product</option>
+                    {products.map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.name} (₹{p.price})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -615,35 +662,22 @@ const Orders = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
-                  Address
-                </label>
-                <input
-                  name="address"
-                  placeholder="Delivery address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="col-span-1">
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
-                    Amount
+                    Quantity
                   </label>
                   <input
-                    name="amount"
+                    name="quantity"
                     type="number"
-                    placeholder="e.g. 3000"
-                    value={formData.amount}
+                    min="1"
+                    placeholder="1"
+                    value={formData.quantity}
                     onChange={handleChange}
                     className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
                   />
                 </div>
-
-                <div>
+                <div className="col-span-1">
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Status
                   </label>
@@ -692,6 +726,35 @@ const Orders = () => {
                       </>
                     )}
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+                  Address
+                </label>
+                <input
+                  name="address"
+                  placeholder="Delivery address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
+                />
+              </div>
+
+              {/* LIVE PREVIEW SECTION */}
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Subtotal</span>
+                  <span className="font-semibold text-slate-700">₹{(products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">GST ({(customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0}%)</span>
+                  <span className="font-semibold text-slate-700">₹{((products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0) * ((customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0) / 100).toFixed(2)}</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2 flex justify-between text-base">
+                  <span className="font-bold text-slate-800">Total Amount</span>
+                  <span className="font-bold text-[#0F3A53]">₹{((products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0) * (1 + ((customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0) / 100)).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -765,6 +828,13 @@ const Orders = () => {
                   Product
                 </label>
                 <p className="text-sm text-slate-600">{selectedOrder.product}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+                  Quantity
+                </label>
+                <p className="text-sm text-slate-600">{selectedOrder.quantity}</p>
               </div>
 
               <div>
