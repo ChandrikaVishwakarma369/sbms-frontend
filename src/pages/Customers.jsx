@@ -49,6 +49,7 @@ const Customers = () => {
     email: "",
     phone: "",
     gstNumber: "",
+    address: "",
     status: "Active",
   });
 
@@ -105,6 +106,7 @@ const Customers = () => {
       email: "",
       phone: "",
       gstNumber: "",
+      address: "",
       status: "Active",
     });
     setGstError("");
@@ -122,6 +124,7 @@ const Customers = () => {
       email: customer.email || "",
       phone: customer.phone || "",
       gstNumber: customer.gstNumber || "",
+      address: customer.address || "",
       status: customer.status || "Active",
     });
     setEditCustomerId(customer.id);
@@ -406,6 +409,7 @@ const Customers = () => {
                 <th className="text-left px-6 py-3 border-b border-slate-200">Customer</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">Email</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">Phone</th>
+                <th className="text-left px-6 py-3 border-b border-slate-200">Address</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">GST Number</th>
                 <th className="text-left px-6 py-3 border-b border-slate-200">Status</th>
                 <th className="text-right px-6 py-3 border-b border-slate-200">Actions</th>
@@ -455,6 +459,10 @@ const Customers = () => {
 
                     <td className="px-6 py-4 text-slate-600">
                       {customer.phone}
+                    </td>
+
+                    <td className="px-6 py-4 text-slate-600 truncate max-w-[200px]" title={customer.address}>
+                      {customer.address || "—"}
                     </td>
 
                     <td className="px-6 py-4">
@@ -610,6 +618,20 @@ const Customers = () => {
                     placeholder="Enter phone number"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+                  Address
+                </label>
+                <textarea
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="Enter complete address"
+                  rows="2"
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
+                ></textarea>
               </div>
 
               <div>
