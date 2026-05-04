@@ -49,7 +49,6 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {/* Chart jaisa badge style (Yahan Date ya Status dikha sakte hain) */}
           <div className="hidden sm:flex items-center gap-2 bg-blue-50 text-blue-600 text-xs font-semibold px-4 py-1.5 rounded-full">
             <Calendar size={14} />
             {new Date().toLocaleDateString("en-GB", {
