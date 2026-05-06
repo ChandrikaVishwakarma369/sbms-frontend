@@ -919,96 +919,132 @@ useEffect(() => {
   };
 
   return (
-    <div className="p-6 bg-slate-100 min-h-screen">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-[#f3f4f6] min-h-screen p-4 md:p-8 space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Invoices</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Create, view, and manage your billing transactions.
+          <h1 className="text-2xl font-bold text-[#0F3A53] tracking-tight">
+            Invoices
+          </h1>
+          <p className="text-gray-500 text-sm mt-0.5">
+            Manage your billing and payments
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#0F3A53] hover:cursor-pointer text-white px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap"
-        >
-          <span className="text-lg leading-none">+</span> Create Invoice
-        </button>
-      </div>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Total Paid</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">
-            {formatAmount(stats.totalPaid)}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Total Pending</p>
-          <p className="text-2xl font-bold text-[#d97706] mt-1">
-            {formatAmount(stats.totalPending)}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Total Overdue</p>
-          <p className="text-2xl font-bold text-[#dc2626] mt-1">
-            {formatAmount(stats.totalOverdue)}
-          </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => downloadCSV(invoices)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 border border-[#0F3A53]/20 text-[#0F3A53] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-white transition"
+          >
+            Export
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0F3A53] hover:bg-[#0a2e42] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg"
+          >
+            <span className="text-lg leading-none">+</span>
+            New Invoice
+          </button>
         </div>
       </div>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="flex flex-col sm:flex-row justify-between gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="Search by ID or customer..."
-            className="border border-gray-200 rounded-lg px-4 py-2 text-sm w-full sm:w-80 focus:outline-none focus:ring-2 focus:ring-[#0F3A53]"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Status:</span>
-            <select
-              className="border border-gray-200 hover:cursor-pointer rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53]"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {[
+          {
+            label: "Total Paid",
+            value: stats.totalPaid,
+            color: "text-green-600",
+            bg: "bg-green-50",
+            icon: "💰",
+          },
+          {
+            label: "Pending",
+            value: stats.totalPending,
+            color: "text-[#d97706]",
+            bg: "bg-amber-50",
+            icon: "⏳",
+          },
+          {
+            label: "Overdue",
+            value: stats.totalOverdue,
+            color: "text-[#dc2626]",
+            bg: "bg-red-50",
+            icon: "⚠️",
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm"
+          >
+            <div
+              className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center text-xl`}
             >
-              <option>All Status</option>
-              <option>PAID</option>
-              <option>PENDING</option>
-              <option>OVERDUE</option>
-            </select>
-            <button
-              onClick={() => downloadCSV(invoices)}
-              title="Download CSV"
-              className="border border-gray-200 rounded-lg p-2 hover:cursor-pointer hover:bg-gray-50 transition"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"
-                />
-              </svg>
-            </button>
+              {stat.icon}
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium">{stat.label}</p>
+              <p className={`text-xl font-bold mt-0.5 ${stat.color}`}>
+                {formatAmount(stat.value)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters Section */}
+      <div className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 mb-4 flex flex-col md:flex-row gap-4 items-stretch md:items-end shadow-sm">
+        <div className="flex-1 min-w-0 md:min-w-[300px]">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
+            Search
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+              🔍
+            </span>
+            <input
+              type="text"
+              placeholder="Search by customer or ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-slate-100 border border-[#0F3A53]/20 rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
+            />
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="w-full md:w-48">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
+            Status
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-slate-100 border border-[#0F3A53]/20 rounded-xl px-4 py-2.5 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
+          >
+            <option>All Status</option>
+            <option>PAID</option>
+            <option>PENDING</option>
+            <option>OVERDUE</option>
+          </select>
+        </div>
+
+        <div className="hidden lg:block ml-auto self-center">
+          <span className="text-sm text-gray-400">
+            Page {page} of {pagination?.totalPages || 1}
+          </span>
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white border border-[#0F3A53]/10 rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="text-xs text-gray-400 uppercase border-b border-gray-100">
-                <th className="py-3 px-4">Invoice ID</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Items</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Due Date</th>
+              <tr className="text-xs text-gray-400 uppercase border-b border-gray-100 bg-slate-50">
+                <th className="py-4 px-4 font-semibold tracking-wider">Invoice ID</th>
+                <th className="py-4 px-4 font-semibold tracking-wider">Customer</th>
+                <th className="py-4 px-4 font-semibold tracking-wider">Items</th>
+                <th className="py-4 px-4 font-semibold tracking-wider">Date</th>
+                <th className="py-4 px-4 font-semibold tracking-wider">Due Date</th>
                 <th className="py-3 px-4">Amount</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>

@@ -11,6 +11,7 @@ import SettingsPage from "./pages/Settings";
 import Report from "./pages/Report";
 import Orders from "./pages/Orders";
 import { Toaster } from "react-hot-toast";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -38,7 +39,13 @@ function App() {
       />
       <Routes>
       {/* Layout Routes */}
-      <Route element={<MainLayout />}>
+      <Route
+        element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/products" element={<Products />} />
         <Route path="/orders" element={<Orders />} />

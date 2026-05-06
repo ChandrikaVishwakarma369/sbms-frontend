@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -22,12 +22,34 @@ ChartJS.register(
 );
 
 const SalesChart = () => {
+  const [chartData, setChartData] = useState({ labels: [], revenue: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/api/orders/sales")
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.success) {
+          setChartData(res.data);
+        } else {
+          setError("Failed to load data");
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error fetching sales data:", err);
+        setError("Connection error");
+        setLoading(false);
+      });
+  }, []);
+
   const data = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    labels: chartData.labels.length > 0 ? chartData.labels : ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     datasets: [
       {
         label: "Monthly Sales",
-        data: [2000, 3000, 2500, 4000, 4500, 5000],
+        data: chartData.revenue.length > 0 ? chartData.revenue : [0, 0, 0, 0, 0, 0],
         borderColor: "#1f4e63",
         backgroundColor: "rgba(31,78,99,0.15)",
         fill: true,
@@ -95,7 +117,7 @@ const SalesChart = () => {
         </div>
 
         <div className="bg-green-50 text-green-600 text-xs font-semibold px-3 py-1 rounded-full">
-          +12% Growth
+          {loading ? "Loading..." : error ? error : "+12% Growth"}
         </div>
       </div>
 

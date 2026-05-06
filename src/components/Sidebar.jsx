@@ -10,9 +10,10 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  X,
 } from "lucide-react";
 
-const Sidebar = () => {
+const Sidebar = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -49,7 +50,14 @@ const Sidebar = () => {
         `}
       </style>
 
-      <div className="bg-[#0F3A53] w-56 h-[95%] rounded-3xl p-6 flex flex-col justify-between shadow-2xl">
+      <div className="bg-[#0F3A53] w-64 md:w-56 h-full md:h-[95%] md:rounded-3xl p-6 flex flex-col justify-between shadow-2xl relative">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white/50 hover:text-white md:hidden"
+        >
+          <X size={24} />
+        </button>
+
         <div>
           {/* ---------------- Logo Section ---------------- */}
           <div className="flex flex-col items-center mb-10 group">
@@ -113,7 +121,14 @@ const Sidebar = () => {
 
         {/* ---------------- Logout Button ---------------- */}
         <div className="pt-4 border-t border-white/10">
-          <button className="flex items-center gap-3 text-slate-400 hover:text-red-400 transition-all w-full px-4 py-2 hover:bg-red-500/10 rounded-xl">
+          <button 
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              navigate("/login", { replace: true });
+            }}
+            className="flex items-center gap-3 text-slate-400 hover:text-red-400 transition-all w-full px-4 py-2 hover:bg-red-500/10 rounded-xl"
+          >
             <LogOut size={18} />
             <span className="text-sm font-medium">Logout</span>
           </button>

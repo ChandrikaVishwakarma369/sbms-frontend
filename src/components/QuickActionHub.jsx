@@ -1,16 +1,24 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Users, FileText, PlusCircle, ArrowUpRight } from "lucide-react";
 
 const QuickActionHub = () => {
-  const actions = [
+  const navigate = useNavigate();
+  
+  // Get user role from localStorage
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = user.role?.toUpperCase() === "ADMIN";
+
+  const allActions = [
     {
       label: "Add Customer",
       desc: "Register new clients",
       icon: <Users size={22} />,
       bg: "bg-blue-50",
       text: "text-blue-700",
-      onClick: () => console.log("Add Customer Clicked"),
+      path: "/customers",
+      requiredAdmin: false,
     },
     {
       label: "Create Invoice",
@@ -18,7 +26,8 @@ const QuickActionHub = () => {
       icon: <FileText size={22} />,
       bg: "bg-emerald-50",
       text: "text-emerald-700",
-      onClick: () => console.log("Create Invoice Clicked"),
+      path: "/invoices",
+      requiredAdmin: false,
     },
     {
       label: "Add Product",
@@ -26,9 +35,13 @@ const QuickActionHub = () => {
       icon: <PlusCircle size={22} />,
       bg: "bg-orange-50",
       text: "text-orange-700",
-      onClick: () => console.log("Add Product Clicked"),
+      path: "/products",
+      requiredAdmin: true,
     },
   ];
+
+  // Filter actions based on role
+  const actions = allActions.filter(action => !action.requiredAdmin || isAdmin);
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -55,7 +68,7 @@ const QuickActionHub = () => {
             key={i}
             whileHover={{ y: -4 }}
             whileTap={{ scale: 0.98 }}
-            onClick={action.onClick}
+            onClick={() => navigate(action.path)}
             className="flex items-center justify-between p-5 bg-white border border-gray-100 rounded-xl cursor-pointer transition-all hover:shadow-md hover:border-gray-200 group"
           >
             <div className="flex items-center gap-4">

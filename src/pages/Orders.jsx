@@ -312,9 +312,9 @@ const Orders = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full p-8 bg-slate-50 min-h-screen">
+    <div className="flex flex-col gap-6 w-full p-4 md:p-8 bg-slate-50 min-h-screen">
       {/* HEADER */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Orders</h1>
           <p className="text-sm text-slate-500">
@@ -324,7 +324,7 @@ const Orders = () => {
 
         <button
           onClick={handleOpenAddOrder}
-          className="flex items-center gap-2 bg-[#0F3A53] hover:bg-[#0b2d44] text-white px-5 py-2.5 rounded-lg shadow-md text-sm font-semibold"
+          className="flex items-center justify-center gap-2 bg-[#0F3A53] hover:bg-[#0b2d44] text-white px-5 py-2.5 rounded-lg shadow-md text-sm font-semibold transition-all"
         >
           <Plus size={16} />
           Create Order
@@ -332,35 +332,35 @@ const Orders = () => {
       </div>
 
       {/* STATS */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex items-center gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex items-center gap-4 transition-all hover:shadow-md">
           <div className="bg-indigo-100 p-3 rounded-lg">
             <ShoppingCart className="text-indigo-600" size={20} />
           </div>
           <div>
-            <p className="text-xs text-slate-400 uppercase">Total Orders</p>
+            <p className="text-xs text-slate-400 uppercase font-medium">Total Orders</p>
             <p className="text-2xl font-bold text-slate-800">{orders.length}</p>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex items-center gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex items-center gap-4 transition-all hover:shadow-md">
           <div className="bg-green-100 p-3 rounded-lg">
             <Truck className="text-green-600" size={20} />
           </div>
           <div>
-            <p className="text-xs text-slate-400 uppercase">Shipped</p>
+            <p className="text-xs text-slate-400 uppercase font-medium">Shipped</p>
             <p className="text-2xl font-bold text-slate-800">
               {orders.filter((o) => o.status === "Shipped").length}
             </p>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex items-center gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex items-center gap-4 transition-all hover:shadow-md sm:col-span-2 lg:col-span-1">
           <div className="bg-yellow-100 p-3 rounded-lg">
             <Clock className="text-yellow-600" size={20} />
           </div>
           <div>
-            <p className="text-xs text-slate-400 uppercase">Pending</p>
+            <p className="text-xs text-slate-400 uppercase font-medium">Pending</p>
             <p className="text-2xl font-bold text-slate-800">
               {orders.filter((o) => o.status === "Pending").length}
             </p>
@@ -370,30 +370,30 @@ const Orders = () => {
 
       {/* TABLE CARD */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        {/* SEARCH */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <div className="flex items-center border border-slate-200 rounded-lg px-3 py-2 w-80 bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-500">
+        {/* SEARCH & FILTER */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between p-6 border-b border-slate-200 gap-4">
+          <div className="flex items-center border border-slate-200 rounded-lg px-3 py-2 w-full md:w-80 bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
             <Search size={16} className="text-slate-400" />
             <input
               type="text"
-              placeholder="Search by order ID, customer or status..."
+              placeholder="Search by ID, customer or status..."
               className="ml-2 outline-none text-sm w-full bg-slate-50 text-slate-700 placeholder-slate-400"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="relative">
+          <div className="relative w-full md:w-auto">
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`flex items-center gap-2 border ${
+              className={`flex items-center justify-center gap-2 border w-full md:w-auto ${
                 statusFilter !== "All"
                   ? "border-[#0F3A53] bg-blue-50 text-[#0F3A53]"
                   : "border-slate-200 text-slate-600 hover:bg-slate-50"
               } px-4 py-2 rounded-lg text-sm transition-all`}
             >
               <Filter size={16} />
-              {statusFilter === "All" ? "Filter" : statusFilter}
+              {statusFilter === "All" ? "Filter Status" : statusFilter}
             </button>
 
             {isFilterOpen && (

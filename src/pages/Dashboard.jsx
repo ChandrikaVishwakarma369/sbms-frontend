@@ -27,9 +27,39 @@ const Dashboard = () => {
   const [statsData, setStatsData] = useState([]);
 
   useEffect(() => {
-    fetch("/mock/statsData.json")
+    fetch("http://localhost:5000/api/dashboard")
       .then((res) => res.json())
-      .then((data) => setStatsData(data))
+      .then((res) => {
+        if (res.success) {
+          const data = res.data;
+          setStatsData([
+            {
+              title: "Total Customers",
+              value: data.totalCustomers.toLocaleString(),
+              change: "+12% since last week",
+              icon: "Users",
+            },
+            {
+              title: "Orders",
+              value: data.totalOrders.toLocaleString(),
+              change: "+8% since yesterday",
+              icon: "ShoppingCart",
+            },
+            {
+              title: "Products",
+              value: data.totalProducts.toLocaleString(),
+              change: "-2% since last month",
+              icon: "Package",
+            },
+            {
+              title: "Revenue",
+              value: `₹${data.totalRevenue.toLocaleString()}`,
+              change: "+18% since last week",
+              icon: "BarChart3",
+            },
+          ]);
+        }
+      })
       .catch((err) => console.error("Error loading stats data:", err));
   }, []);
 
@@ -74,11 +104,11 @@ const Dashboard = () => {
       </div>
 
       {/* 🔹 3. Charts & Invoices */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
           <SalesChart />
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-fit">
           <RecentInvoicesTable />
         </div>
       </div>
@@ -87,8 +117,10 @@ const Dashboard = () => {
       <QuickActionHub />
 
       {/* 🔹 5. Bottom Tables */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8">
-        <PendingPayments />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-8">
+        <div className="sm:col-span-2 lg:col-span-1">
+           <PendingPayments />
+        </div>
         <RecentOrdersTable />
         <LowStockAlert />
       </div>
