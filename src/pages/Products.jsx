@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useEffect } from "react";
 import API from "../utils/api";
-import { X } from "lucide-react";
+import { X, Trash2, Edit2, Package, Check, AlertTriangle } from "lucide-react";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 function EditProductModal({ product, onClose, onUpdate }) {
   const [form, setForm] = useState({
@@ -289,6 +290,9 @@ export default function Products() {
 
   const [editProduct, setEditProduct] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
 
   useEffect(() => {
     fetchProducts();
@@ -334,12 +338,21 @@ export default function Products() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
     try {
-      await API.delete(`/products/${id}`);
-      setProducts((prev) => prev.filter((p) => p._id !== id));
+      await API.delete(`/products/${productToDelete._id}`);
+      setProducts((prev) => prev.filter((p) => p._id !== productToDelete._id));
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setProductToDelete(null);
     }
   };
 
@@ -356,9 +369,9 @@ export default function Products() {
   };
 
   const totalProducts = products.length;
-  const activeCount = products.filter((p) => p.status === "Active").length;
-  const lowStockCount = products.filter((p) => p.status === "Low Stock").length;
-  const inactiveCount = products.filter((p) => p.status === "Inactive").length;
+  const activeCount = products.filter((p) => p && String(p.status || "").toLowerCase() === "active").length;
+  const lowStockCount = products.filter((p) => p && Number(p.stock || 0) > 0 && Number(p.stock || 0) < 10).length;
+  const inactiveCount = products.filter((p) => p && (String(p.status || "").toLowerCase() === "inactive" || Number(p.stock || 0) === 0)).length;
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-8 text-[#0F3A53]">
@@ -618,7 +631,7 @@ export default function Products() {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(product._id)}
+                            onClick={() => handleDeleteClick(product)}
                             className="text-xs px-3 py-1.5 rounded-lg border border-[#dc2626]/30 text-[#dc2626] hover:bg-[#dc2626]/10 transition font-medium"
                           >
                             Delete
@@ -691,6 +704,15 @@ export default function Products() {
           onUpdate={handleUpdate}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${productToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete Product"
+      />
     </div>
   );
 }
