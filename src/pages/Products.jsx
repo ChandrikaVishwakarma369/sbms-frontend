@@ -297,16 +297,24 @@ export default function Products() {
   const fetchProducts = async () => {
     try {
       const res = await API.get("/products");
-      setProducts(res.data.products);
+      // Safety check for response structure
+      const productsData = res.data.products || (Array.isArray(res.data) ? res.data : []);
+      setProducts(productsData);
     } catch (error) {
-      console.error(error);
+      console.error("Fetch Products Error:", error);
+      setProducts([]); // Set to empty array on error to prevent crashes
     }
   };
 
   const filtered = products.filter((p) => {
-    const matchCat = category === "All" || p.category === category;
-    const matchStat = status === "All" || p.status === status;
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    if (!p) return false;
+    const name = p.name || "";
+    const pCategory = p.category || "Uncategorized";
+    const pStatus = p.status || "Active";
+
+    const matchCat = category === "All" || pCategory === category;
+    const matchStat = status === "All" || pStatus === status;
+    const matchSearch = name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchStat && matchSearch;
   });
 
