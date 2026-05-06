@@ -604,9 +604,9 @@ const Orders = () => {
 
       {/* ADD ORDER MODAL */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8 space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 p-4">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden relative">
+            <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-50">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
                   {editOrderId ? "Edit Order" : "Add New Order"}
@@ -626,7 +626,7 @@ const Orders = () => {
               </button>
             </div>
 
-            <div className="space-y-5">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-5 custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
@@ -848,7 +848,7 @@ const Orders = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <div className="p-6 md:p-8 flex justify-end gap-3 border-t border-slate-200">
               <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="px-6 py-2.5 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -869,9 +869,9 @@ const Orders = () => {
 
       {/* ORDER DETAILS MODAL */}
       {isOrderModalOpen && selectedOrder && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden relative">
+            <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-50">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
                   Order Details
@@ -888,7 +888,7 @@ const Orders = () => {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
@@ -961,7 +961,7 @@ const Orders = () => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-200">
+            <div className="p-6 md:p-8 flex justify-end pt-4 border-t border-slate-200">
               <button
                 onClick={() => setIsOrderModalOpen(false)}
                 className="px-6 py-2.5 bg-[#0F3A53] text-white text-sm font-semibold rounded-lg hover:bg-[#0b2d44]"
