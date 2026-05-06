@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import API from "../utils/api";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 // --- Status Badge ---
 const StatusBadge = ({ status }) => {
@@ -186,6 +187,9 @@ export default function Employees() {
   const [showModal, setShowModal] = useState(false);
   const [editEmp, setEditEmp] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [empToDelete, setEmpToDelete] = useState(null);
 
   useEffect(() => {
     fetchEmployees();
@@ -230,13 +234,21 @@ export default function Employees() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this employee?")) return;
+  const handleDeleteClick = (emp) => {
+    setEmpToDelete(emp);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!empToDelete) return;
     try {
-      await API.delete(`/employees/${id}`);
-      setEmployees((prev) => prev.filter((e) => e._id !== id));
+      await API.delete(`/employees/${empToDelete._id}`);
+      setEmployees((prev) => prev.filter((e) => e._id !== empToDelete._id));
     } catch (err) {
       console.error("DELETE ERROR:", err);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setEmpToDelete(null);
     }
   };
 
@@ -392,11 +404,12 @@ export default function Employees() {
                               <Pencil size={18} />
                             </button>
                             <button
-                              onClick={() => handleDelete(emp._id)}
-                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                            onClick={() => handleDeleteClick(emp)}
+                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shadow-sm border border-rose-100"
+                            title="Delete Employee"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                           </div>
                         </td>
                       )}
@@ -418,6 +431,15 @@ export default function Employees() {
           initialData={editEmp}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Employee"
+        message={`Are you sure you want to delete "${empToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete Employee"
+      />
     </div>
   );
 }

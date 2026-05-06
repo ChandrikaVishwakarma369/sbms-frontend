@@ -44,8 +44,7 @@ const Orders = () => {
   const [formData, setFormData] = useState({
     customerId: "",
     contact: "",
-    productId: "",
-    quantity: 1,
+    products: [{ productId: "", quantity: 1 }],
     date: "",
     address: "",
     status: "Pending",
@@ -140,12 +139,33 @@ const Orders = () => {
     }
   };
 
+  const handleItemChange = (index, field, value) => {
+    const newProducts = [...formData.products];
+    newProducts[index] = { ...newProducts[index], [field]: value };
+    setFormData({ ...formData, products: newProducts });
+  };
+
+  const addProductRow = () => {
+    setFormData({
+      ...formData,
+      products: [...formData.products, { productId: "", quantity: 1 }]
+    });
+  };
+
+  const removeProductRow = (index) => {
+    if (formData.products.length === 1) {
+      toast.error("At least one product is required");
+      return;
+    }
+    const newProducts = formData.products.filter((_, i) => i !== index);
+    setFormData({ ...formData, products: newProducts });
+  };
+
   const resetOrderForm = () => {
     setFormData({
       customerId: "",
       contact: "",
-      productId: "",
-      quantity: 1,
+      products: [{ productId: "", quantity: 1 }],
       date: new Date().toISOString().split('T')[0],
       address: "",
       status: "Pending",
@@ -162,8 +182,10 @@ const Orders = () => {
     setFormData({
       customerId: order.customerId || "",
       contact: order.contact || "",
-      productId: order.productId || "",
-      quantity: order.quantity || 1,
+      products: order.products?.map(item => ({
+        productId: item.productId || "",
+        quantity: item.quantity || 1
+      })) || [{ productId: "", quantity: 1 }],
       date: order.date || "",
       address: order.address || "",
       status: order.status || "Pending",
@@ -173,8 +195,8 @@ const Orders = () => {
   };
 
   const handleSaveOrder = async () => {
-    if (!formData.customerId || !formData.contact || !formData.productId || !formData.quantity) {
-      toast.error("Please fill in all required fields");
+    if (!formData.customerId || !formData.contact || formData.products.some(item => !item.productId || !item.quantity)) {
+      toast.error("Please fill in all required fields and ensure each product has a quantity");
       return;
     }
 
@@ -194,17 +216,17 @@ const Orders = () => {
     try {
       if (editOrderId) {
         // Update existing order
-        await updateOrder(editOrderId, payload);
+        const updatedOrder = await updateOrder(editOrderId, payload);
         const updated = orders.map((o) =>
           o.id === editOrderId
-            ? { ...o, ...payload }
+            ? updatedOrder
             : o
         );
         setOrders(updated);
       } else {
         // Create new order
         const newOrder = await createOrder(payload);
-        setOrders([...orders, newOrder]);
+        setOrders([newOrder, ...orders]);
       }
 
       resetOrderForm();
@@ -279,15 +301,27 @@ const Orders = () => {
     addLine("Contact", order.contact, y);
     y += lineHeight;
 
-    addLine("Product", order.product, y);
-    y += lineHeight;
-
-    addLine("Quantity", order.quantity, y);
-    y += lineHeight;
-
     addLine("Date", order.date, y);
-    y += lineHeight;
+    y += lineHeight * 1.5;
 
+    // Items Header
+    doc.setFont("helvetica", "bold");
+    doc.text("Product", 40, y);
+    doc.text("Qty", 350, y);
+    doc.text("Total (inc. GST)", 450, y);
+    y += lineHeight;
+    doc.line(40, y - 10, 555, y - 10);
+
+    doc.setFont("helvetica", "normal");
+    order.products?.forEach((item) => {
+      doc.text(item.name || "N/A", 40, y);
+      doc.text(item.quantity.toString(), 350, y);
+      const itemTotal = item.price * item.quantity * (1 + item.gst / 100);
+      doc.text(`Rs. ${itemTotal.toFixed(2)}`, 450, y);
+      y += lineHeight;
+    });
+
+    y += lineHeight;
     // Wrap long address text
     const addressLines = doc.splitTextToSize(order.address, 360);
     addLine("Address", addressLines[0], y);
@@ -630,26 +664,64 @@ const Orders = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
-                    Product
+              {/* PRODUCTS SECTION */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Products
                   </label>
-                  <select
-                    name="productId"
-                    value={formData.productId}
-                    onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  <button
+                    type="button"
+                    onClick={addProductRow}
+                    className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
                   >
-                    <option value="">Select Product</option>
-                    {products.map((p) => (
-                      <option key={p._id} value={p._id}>
-                        {p.name} (₹{p.price})
-                      </option>
-                    ))}
-                  </select>
+                    <Plus size={14} />
+                    Add Product
+                  </button>
                 </div>
 
+                <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                  {formData.products.map((item, index) => (
+                    <div key={index} className="flex gap-3 items-end group">
+                      <div className="flex-1">
+                        <select
+                          value={item.productId}
+                          onChange={(e) => handleItemChange(index, "productId", e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                        >
+                          <option value="">Select Product</option>
+                          {products.map((p) => (
+                            <option key={p._id} value={p._id}>
+                              {p.name} (₹{p.price})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="w-24">
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="Qty"
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || "")}
+                          className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeProductRow(index)}
+                        className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
                     Date
@@ -660,23 +732,6 @@ const Orders = () => {
                     value={formData.date}
                     onChange={handleChange}
                     className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
-                    Quantity
-                  </label>
-                  <input
-                    name="quantity"
-                    type="number"
-                    min="1"
-                    placeholder="1"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white placeholder-slate-400"
                   />
                 </div>
                 <div className="col-span-1">
@@ -746,17 +801,49 @@ const Orders = () => {
 
               {/* LIVE PREVIEW SECTION */}
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+                {formData.products.map((item, idx) => {
+                  const product = products.find(p => p._id === item.productId);
+                  if (!product) return null;
+                  const itemSubtotal = product.price * (item.quantity || 0);
+                  return (
+                    <div key={idx} className="flex justify-between text-[11px] text-slate-500 italic">
+                      <span>{product.name} (x{item.quantity})</span>
+                      <span>₹{itemSubtotal.toFixed(2)}</span>
+                    </div>
+                  );
+                })}
+                <div className="border-t border-slate-100 my-1"></div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Subtotal</span>
-                  <span className="font-semibold text-slate-700">₹{(products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0)}</span>
+                  <span className="font-semibold text-slate-700">
+                    ₹{formData.products.reduce((sum, item) => {
+                      const product = products.find(p => p._id === item.productId);
+                      return sum + (product?.price || 0) * (item.quantity || 0);
+                    }, 0).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">GST ({(customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0}%)</span>
-                  <span className="font-semibold text-slate-700">₹{((products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0) * ((customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0) / 100).toFixed(2)}</span>
+                  <span className="text-slate-500">GST (Total)</span>
+                  <span className="font-semibold text-slate-700">
+                    ₹{formData.products.reduce((sum, item) => {
+                      const product = products.find(p => p._id === item.productId);
+                      const hasGST = customers.find(c => c.id === formData.customerId)?.gstNumber;
+                      const gstRate = hasGST ? (product?.gst || 0) : 0;
+                      return sum + (product?.price || 0) * (item.quantity || 0) * (gstRate / 100);
+                    }, 0).toFixed(2)}
+                  </span>
                 </div>
                 <div className="border-t border-slate-200 pt-2 flex justify-between text-base">
                   <span className="font-bold text-slate-800">Total Amount</span>
-                  <span className="font-bold text-[#0F3A53]">₹{((products.find(p => p._id === formData.productId)?.price || 0) * (formData.quantity || 0) * (1 + ((customers.find(c => c.id === formData.customerId)?.gstNumber && products.find(p => p._id === formData.productId)) ? (products.find(p => p._id === formData.productId).gst || 0) : 0) / 100)).toFixed(2)}</span>
+                  <span className="font-bold text-[#0F3A53]">
+                    ₹{formData.products.reduce((sum, item) => {
+                      const product = products.find(p => p._id === item.productId);
+                      const hasGST = customers.find(c => c.id === formData.customerId)?.gstNumber;
+                      const gstRate = hasGST ? (product?.gst || 0) : 0;
+                      const itemTotal = (product?.price || 0) * (item.quantity || 0) * (1 + gstRate / 100);
+                      return sum + itemTotal;
+                    }, 0).toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -802,22 +889,35 @@ const Orders = () => {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  Order ID
-                </label>
-                <p className="text-sm text-slate-600">
-                  #{selectedOrder.orderId}
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+                    Customer
+                  </label>
+                  <p className="text-sm text-slate-600 font-medium">
+                    {selectedOrder.customer}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+                    Date
+                  </label>
+                  <p className="text-sm text-slate-600 font-medium">{selectedOrder.date}</p>
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  Customer
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+                  Products
                 </label>
-                <p className="text-sm text-slate-600">
-                  {selectedOrder.customer}
-                </p>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2">
+                  {selectedOrder.products?.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm">
+                      <span className="text-slate-600 font-medium">{item.name} <span className="text-slate-400 text-xs">x{item.quantity}</span></span>
+                      <span className="text-slate-700 font-semibold text-xs">₹{(item.price * item.quantity * (1 + item.gst / 100)).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -831,61 +931,33 @@ const Orders = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  Product
-                </label>
-                <p className="text-sm text-slate-600">
-                  {selectedOrder.product}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  Quantity
-                </label>
-                <p className="text-sm text-slate-600">{selectedOrder.quantity}</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  Date
-                </label>
-                <p className="text-sm text-slate-600">{selectedOrder.date}</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
                   Address
                 </label>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 leading-relaxed">
                   {selectedOrder.address}
                 </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  Amount
-                </label>
-                <p className="text-sm text-slate-600">
-                  ₹{selectedOrder.amount}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  Status
-                </label>
-                <span
-                  className={`inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full ${getStatusStyle(
-                    selectedOrder.status
-                  )}`}
-                >
+              <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Total Amount</label>
+                  <p className="text-2xl font-bold text-[#0F3A53]">₹{selectedOrder.amount}</p>
+                </div>
+                <div className="text-right">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Status</label>
                   <span
-                    className={`w-2 h-2 rounded-full ${getStatusDotStyle(
+                    className={`inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full ${getStatusStyle(
                       selectedOrder.status
                     )}`}
-                  ></span>
-                  {selectedOrder.status}
-                </span>
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${getStatusDotStyle(
+                        selectedOrder.status
+                      )}`}
+                    ></span>
+                    {selectedOrder.status}
+                  </span>
+                </div>
               </div>
             </div>
 

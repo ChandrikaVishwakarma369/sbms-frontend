@@ -52,10 +52,10 @@ const Dashboard = () => {
               icon: "Package",
             },
             {
-              title: "Revenue",
-              value: `₹${data.totalRevenue.toLocaleString()}`,
-              change: "+18% since last week",
-              icon: "BarChart3",
+              title: "Total Employees",
+              value: data.totalEmployees.toLocaleString(),
+              change: "+2% since last month",
+              icon: "Users",
             },
           ]);
         }
