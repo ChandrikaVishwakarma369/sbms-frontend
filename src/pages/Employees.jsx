@@ -257,12 +257,12 @@ export default function Employees() {
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-[#0F3A53] tracking-tight">
               Employees
             </h1>
-            <p className="text-slate-500">
+            <p className="text-slate-500 mt-1">
               Manage your organization's workforce
             </p>
           </div>
@@ -272,7 +272,7 @@ export default function Employees() {
                 setEditEmp(null);
                 setShowModal(true);
               }}
-              className="flex items-center gap-2 bg-[#0F3A53] hover:bg-[#0a2e42] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg"
+              className="flex items-center justify-center gap-2 bg-[#0F3A53] hover:bg-[#0a2e42] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg w-full sm:w-auto"
             >
               <Plus size={18} /> Add Employee
             </button>
@@ -280,7 +280,7 @@ export default function Employees() {
         </div>
 
         {/* --- Stats Cards Section --- */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatCard
             title="Total Employees"
             count={totalEmployees}
