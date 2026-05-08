@@ -8,52 +8,53 @@ import Customers from "./pages/Customers";
 import Employees from "./pages/Employees";
 import MainLayout from "./layout/MainLayout";
 import SettingsPage from "./pages/Settings";
-import Report from "./pages/Report";
+
 import Orders from "./pages/Orders";
 import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
     <>
-      <Toaster 
+      <Toaster
         position="top-center"
         toastOptions={{
           duration: 3000,
           style: {
-            background: '#ffffff',
-            color: '#0F3A53',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: '500',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            background: "#ffffff",
+            color: "#0F3A53",
+            border: "1px solid #e2e8f0",
+            borderRadius: "12px",
+            fontSize: "14px",
+            fontWeight: "500",
+            boxShadow:
+              "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
           },
           success: {
             iconTheme: {
-              primary: '#0F3A53',
-              secondary: '#fff',
+              primary: "#0F3A53",
+              secondary: "#fff",
             },
           },
-        }} 
+        }}
       />
       <Routes>
-      {/* Layout Routes */}
-      <Route element={<MainLayout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/employees" element={<Employees />} />
-        <Route path="/invoices" element={<Invoices />} />
-        <Route path="/report" element={<Report />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Route>
+        {/* Layout Routes */}
+        <Route element={<MainLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/invoices" element={<Invoices />} />
 
-      {/* without layout */}
-      <Route path="/login" element={<LoginSignup />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
 
-      {/* Default routes */}
-      <Route path="/" element={<Navigate to="/login" />} />
+        {/* without layout */}
+        <Route path="/login" element={<LoginSignup />} />
+
+        {/* Default routes */}
+        <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
     </>
   );

@@ -27,7 +27,6 @@ const Sidebar = () => {
     { name: "Customers", path: "/customers", icon: <Users size={18} /> },
     { name: "Invoices", path: "/invoices", icon: <FileText size={18} /> },
     { name: "Employees", path: "/employees", icon: <UserCog size={18} /> },
-    { name: "Reports", path: "/report", icon: <BarChart3 size={18} /> },
     { name: "Settings", path: "/settings", icon: <Settings size={18} /> },
   ];
 
