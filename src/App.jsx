@@ -11,6 +11,7 @@ import SettingsPage from "./pages/Settings";
 
 import Orders from "./pages/Orders";
 import { Toaster } from "react-hot-toast";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (

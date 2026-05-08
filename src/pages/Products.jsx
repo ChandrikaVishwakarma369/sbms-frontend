@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useEffect } from "react";
 import API from "../utils/api";
-import { X } from "lucide-react";
+import { X, Trash2, Edit2, Package, Check, AlertTriangle } from "lucide-react";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 function EditProductModal({ product, onClose, onUpdate }) {
   const [form, setForm] = useState({
@@ -289,6 +290,9 @@ export default function Products() {
 
   const [editProduct, setEditProduct] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
 
   useEffect(() => {
     fetchProducts();
@@ -297,16 +301,24 @@ export default function Products() {
   const fetchProducts = async () => {
     try {
       const res = await API.get("/products");
-      setProducts(res.data.products);
+      // Safety check for response structure
+      const productsData = res.data.products || (Array.isArray(res.data) ? res.data : []);
+      setProducts(productsData);
     } catch (error) {
-      console.error(error);
+      console.error("Fetch Products Error:", error);
+      setProducts([]); // Set to empty array on error to prevent crashes
     }
   };
 
   const filtered = products.filter((p) => {
-    const matchCat = category === "All" || p.category === category;
-    const matchStat = status === "All" || p.status === status;
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    if (!p) return false;
+    const name = p.name || "";
+    const pCategory = p.category || "Uncategorized";
+    const pStatus = p.status || "Active";
+
+    const matchCat = category === "All" || pCategory === category;
+    const matchStat = status === "All" || pStatus === status;
+    const matchSearch = name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchStat && matchSearch;
   });
 
@@ -326,12 +338,21 @@ export default function Products() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
     try {
-      await API.delete(`/products/${id}`);
-      setProducts((prev) => prev.filter((p) => p._id !== id));
+      await API.delete(`/products/${productToDelete._id}`);
+      setProducts((prev) => prev.filter((p) => p._id !== productToDelete._id));
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setProductToDelete(null);
     }
   };
 
@@ -348,16 +369,16 @@ export default function Products() {
   };
 
   const totalProducts = products.length;
-  const activeCount = products.filter((p) => p.status === "Active").length;
-  const lowStockCount = products.filter((p) => p.status === "Low Stock").length;
-  const inactiveCount = products.filter((p) => p.status === "Inactive").length;
+  const activeCount = products.filter((p) => p && String(p.status || "").toLowerCase() === "active").length;
+  const lowStockCount = products.filter((p) => p && Number(p.stock || 0) > 0 && Number(p.stock || 0) < 10).length;
+  const inactiveCount = products.filter((p) => p && (String(p.status || "").toLowerCase() === "inactive" || Number(p.stock || 0) === 0)).length;
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6 text-[#0F3A53]">
+    <div className="min-h-screen bg-slate-100 p-4 md:p-8 text-[#0F3A53]">
       {/*  Page Header  */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F3A53] tracking-tight">
+          <h1 className="text-3xl font-bold text-[#0F3A53] tracking-tight">
             Products
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">
@@ -366,7 +387,7 @@ export default function Products() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#0F3A53] hover:bg-[#0a2e42] hover:cursor-pointer text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg"
+          className="flex items-center justify-center gap-2 bg-[#0F3A53] hover:bg-[#0a2e42] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg w-full sm:w-auto"
         >
           <span className="text-lg leading-none">+</span>
           Add Product
@@ -374,38 +395,44 @@ export default function Products() {
       </div>
 
       {/*  Stats Cards  */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           {
             label: "Total Products",
             value: totalProducts,
             color: "text-[#0F3A53]",
             icon: "📦",
+            bg: "bg-blue-50"
           },
           {
             label: "Active",
             value: activeCount,
             color: "text-teal-600",
             icon: "✅",
+            bg: "bg-teal-50"
           },
           {
             label: "Low Stock",
             value: lowStockCount,
             color: "text-[#d97706]",
             icon: "⚠️",
+            bg: "bg-amber-50"
           },
           {
             label: "Inactive",
             value: inactiveCount,
             color: "text-[#dc2626]",
             icon: "🚫",
+            bg: "bg-red-50"
           },
         ].map((stat) => (
           <div
             key={stat.label}
-            className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm"
+            className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm transition-all hover:shadow-md"
           >
-            <span className="text-2xl">{stat.icon}</span>
+            <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center text-xl`}>
+              {stat.icon}
+            </div>
             <div>
               <p className="text-xs text-gray-500 font-medium">{stat.label}</p>
               <p className={`text-2xl font-bold mt-0.5 ${stat.color}`}>
@@ -417,48 +444,50 @@ export default function Products() {
       </div>
 
       {/*  Filters  */}
-      <div className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 mb-4 flex flex-wrap gap-4 items-end shadow-sm">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Category
-          </label>
-          <select
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              setPage(1);
-            }}
-            className="bg-slate-100 border border-[#0F3A53]/20 rounded-xl px-3 py-2 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition min-w-36"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+      <div className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 mb-4 flex flex-col md:flex-row gap-4 items-stretch md:items-end shadow-sm">
+        <div className="grid grid-cols-2 gap-4 flex-1 md:flex-none">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setPage(1);
+              }}
+              className="bg-slate-100 border border-[#0F3A53]/20 rounded-xl px-3 py-2 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Status
+            </label>
+            <select
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+              }}
+              className="bg-slate-100 border border-[#0F3A53]/20 rounded-xl px-3 py-2 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Status
-          </label>
-          <select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
-            className="bg-slate-100 border border-[#0F3A53]/20 rounded-xl px-3 py-2 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition min-w-36"
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5 flex-1 min-w-48">
+        <div className="flex flex-col gap-1.5 flex-1 min-w-0 md:min-w-[300px]">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
             Search
           </label>
@@ -474,12 +503,12 @@ export default function Products() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full bg-slate-100 border border-[#0F3A53]/20 rounded-xl pl-9 pr-4 py-2 text-sm text-[#0F3A53] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
+              className="w-full bg-slate-100 border border-[#0F3A53]/20 rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#0F3A53] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
             />
           </div>
         </div>
 
-        <div className="ml-auto self-end">
+        <div className="hidden lg:block ml-auto self-end">
           <span className="text-sm text-gray-500">
             <span className="text-[#0F3A53] font-semibold">
               {filtered.length}
@@ -602,7 +631,7 @@ export default function Products() {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(product._id)}
+                            onClick={() => handleDeleteClick(product)}
                             className="text-xs px-3 py-1.5 rounded-lg border border-[#dc2626]/30 text-[#dc2626] hover:bg-[#dc2626]/10 transition font-medium"
                           >
                             Delete
@@ -675,6 +704,15 @@ export default function Products() {
           onUpdate={handleUpdate}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${productToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete Product"
+      />
     </div>
   );
 }

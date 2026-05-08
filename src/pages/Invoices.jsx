@@ -9,7 +9,8 @@ import {
 import { getCustomers } from "../services/customer.service";
 import { getProducts } from "../services/product.service";
 import toast from "react-hot-toast";
-
+import jsPDF from "jspdf"; 
+import autoTable from "jspdf-autotable"; 
 const statusStyles = {
   PAID: "bg-green-100 text-green-700 border border-green-300",
   PENDING: "bg-yellow-100 text-[#d97706] border border-yellow-300",
@@ -147,17 +148,17 @@ export default function Invoices() {
     useState(false);
 
   const [products, setProducts] = useState([]);
-useEffect(() => {
-  if (showModal || selectedInvoice || editInvoice) {
-    document.body.style.overflow = "hidden";
-  } else {
-    document.body.style.overflow = "auto";
-  }
+  useEffect(() => {
+    if (showModal || selectedInvoice || editInvoice) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
 
-  return () => {
-    document.body.style.overflow = "auto";
-  };
-}, [showModal, selectedInvoice, editInvoice]);
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showModal, selectedInvoice, editInvoice]);
   // ✅ Invoices + Stats fetch — search/filter/page change pe re-fetch
   const fetchInvoices = useCallback(async () => {
     setIsLoading(true);
@@ -513,7 +514,165 @@ useEffect(() => {
     setEditCustomerSearch("");
     setEditErrors({});
   };
+  // ✅ NEW: PDF download
+  const handleDownloadPDF = (inv) => {
+    const doc = new jsPDF();
+    const effectiveStatus = getEffectiveStatus(inv);
 
+    // ── Header ──────────────────────────────────────
+    doc.setFillColor(15, 58, 83); // #0F3A53
+    doc.rect(0, 0, 210, 32, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", 14, 14);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`SBMS - Smart Business`, 14, 22);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(inv.invoiceId || inv._id, 196, 14, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Status: ${effectiveStatus}`, 196, 22, { align: "right" });
+
+    // ── Invoice Info ─────────────────────────────────
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(10);
+    let y = 44;
+
+    const leftCol = [
+      ["Customer", inv.customerName],
+      ...(inv.customerGst ? [["GST No.", inv.customerGst]] : []),
+      ["Invoice Date", formatDate(inv.date)],
+      ...(inv.dueDate ? [["Due Date", formatDate(inv.dueDate)]] : []),
+    ];
+    const rightCol = [
+      ["Status", effectiveStatus],
+      ...(inv.paymentMethod ? [["Payment", inv.paymentMethod]] : []),
+    ];
+
+    leftCol.forEach(([label, value]) => {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 100, 100);
+      doc.text(label + ":", 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 30, 30);
+      doc.text(value, 55, y);
+      y += 7;
+    });
+
+    let ry = 44;
+    rightCol.forEach(([label, value]) => {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 100, 100);
+      doc.text(label + ":", 120, ry);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 30, 30);
+      doc.text(value, 155, ry);
+      ry += 7;
+    });
+
+    // ── Divider ──────────────────────────────────────
+    y = Math.max(y, ry) + 4;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(14, y, 196, y);
+    y += 6;
+
+    // ── Items Table ──────────────────────────────────
+    const tableRows = (inv.items || []).map((item, i) => [
+      i + 1,
+      item.name,
+      item.qty,
+      `Rs. ${Number(item.rate).toLocaleString("en-IN")}`,
+      `Rs. ${Number(item.amount).toLocaleString("en-IN")}`,
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [["#", "Product / Service", "Qty", "Rate", "Amount"]],
+      body: tableRows,
+      theme: "striped",
+      headStyles: {
+        fillColor: [15, 58, 83],
+        textColor: 255,
+        fontStyle: "bold",
+        fontSize: 9,
+      },
+      bodyStyles: { fontSize: 9, textColor: [40, 40, 40] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: "center" },
+        1: { cellWidth: 80 },
+        2: { cellWidth: 20, halign: "center" },
+        3: { cellWidth: 35, halign: "right" },
+        4: { cellWidth: 35, halign: "right" },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    // ── Totals ───────────────────────────────────────
+    const finalY = doc.lastAutoTable.finalY + 6;
+    const totals = [
+      ["Subtotal", `Rs. ${Number(inv.subtotal).toLocaleString("en-IN")}`],
+      [
+        `GST (${inv.gstPercent || 18}%)`,
+        `Rs. ${Number(inv.gst).toLocaleString("en-IN")}`,
+      ],
+    ];
+
+    totals.forEach(([label, value], idx) => {
+      const ty = finalY + idx * 7;
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      doc.text(label, 148, ty, { align: "right" });
+      doc.setTextColor(40, 40, 40);
+      doc.text(value, 196, ty, { align: "right" });
+    });
+
+    // Total row
+    const totalY = finalY + totals.length * 7 + 2;
+    doc.setFillColor(15, 58, 83);
+    doc.roundedRect(130, totalY - 5, 66, 10, 2, 2, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Total", 148, totalY + 1, { align: "right" });
+    doc.text(
+      `Rs. ${Number(inv.total).toLocaleString("en-IN")}`,
+      194,
+      totalY + 1,
+      { align: "right" },
+    );
+
+    // ── Notes ────────────────────────────────────────
+    if (inv.notes) {
+      const notesY = totalY + 16;
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("Notes:", 14, notesY);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60, 60, 60);
+      const noteLines = doc.splitTextToSize(inv.notes, 160);
+      doc.text(noteLines, 14, notesY + 5);
+    }
+
+    // ── Footer ───────────────────────────────────────
+    doc.setFillColor(15, 58, 83);
+    doc.rect(0, 285, 210, 12, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text("Generated by SBMS — Smart Business Management System", 105, 292, {
+      align: "center",
+    });
+
+    doc.save(
+      `${inv.invoiceId || "invoice"}_${inv.customerName.replace(/\s+/g, "_")}.pdf`,
+    );
+    toast.success("Invoice PDF downloaded!");
+  };
   const renderLineItems = (
     items,
     onItemChange,
@@ -919,96 +1078,140 @@ useEffect(() => {
   };
 
   return (
-    <div className="p-6 bg-slate-100 min-h-screen">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-[#f3f4f6] min-h-screen p-4 md:p-8 space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Invoices</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Create, view, and manage your billing transactions.
+          <h1 className="text-2xl font-bold text-[#0F3A53] tracking-tight">
+            Invoices
+          </h1>
+          <p className="text-gray-500 text-sm mt-0.5">
+            Manage your billing and payments
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#0F3A53] hover:cursor-pointer text-white px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap"
-        >
-          <span className="text-lg leading-none">+</span> Create Invoice
-        </button>
-      </div>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Total Paid</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">
-            {formatAmount(stats.totalPaid)}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Total Pending</p>
-          <p className="text-2xl font-bold text-[#d97706] mt-1">
-            {formatAmount(stats.totalPending)}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Total Overdue</p>
-          <p className="text-2xl font-bold text-[#dc2626] mt-1">
-            {formatAmount(stats.totalOverdue)}
-          </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => downloadCSV(invoices)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 border border-[#0F3A53]/20 text-[#0F3A53] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-white transition"
+          >
+            Export
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0F3A53] hover:bg-[#0a2e42] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg"
+          >
+            <span className="text-lg leading-none">+</span>
+            New Invoice
+          </button>
         </div>
       </div>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="flex flex-col sm:flex-row justify-between gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="Search by ID or customer..."
-            className="border border-gray-200 rounded-lg px-4 py-2 text-sm w-full sm:w-80 focus:outline-none focus:ring-2 focus:ring-[#0F3A53]"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Status:</span>
-            <select
-              className="border border-gray-200 hover:cursor-pointer rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53]"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {[
+          {
+            label: "Total Paid",
+            value: stats.totalPaid,
+            color: "text-green-600",
+            bg: "bg-green-50",
+            icon: "💰",
+          },
+          {
+            label: "Pending",
+            value: stats.totalPending,
+            color: "text-[#d97706]",
+            bg: "bg-amber-50",
+            icon: "⏳",
+          },
+          {
+            label: "Overdue",
+            value: stats.totalOverdue,
+            color: "text-[#dc2626]",
+            bg: "bg-red-50",
+            icon: "⚠️",
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-sm"
+          >
+            <div
+              className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center text-xl`}
             >
-              <option>All Status</option>
-              <option>PAID</option>
-              <option>PENDING</option>
-              <option>OVERDUE</option>
-            </select>
-            <button
-              onClick={() => downloadCSV(invoices)}
-              title="Download CSV"
-              className="border border-gray-200 rounded-lg p-2 hover:cursor-pointer hover:bg-gray-50 transition"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"
-                />
-              </svg>
-            </button>
+              {stat.icon}
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium">{stat.label}</p>
+              <p className={`text-xl font-bold mt-0.5 ${stat.color}`}>
+                {formatAmount(stat.value)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters Section */}
+      <div className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 mb-4 flex flex-col md:flex-row gap-4 items-stretch md:items-end shadow-sm">
+        <div className="flex-1 min-w-0 md:min-w-[300px]">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
+            Search
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+              🔍
+            </span>
+            <input
+              type="text"
+              placeholder="Search by customer or ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-slate-100 border border-[#0F3A53]/20 rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
+            />
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="w-full md:w-48">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
+            Status
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-slate-100 border border-[#0F3A53]/20 rounded-xl px-4 py-2.5 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
+          >
+            <option>All Status</option>
+            <option>PAID</option>
+            <option>PENDING</option>
+            <option>OVERDUE</option>
+          </select>
+        </div>
+
+        <div className="hidden lg:block ml-auto self-center">
+          <span className="text-sm text-gray-400">
+            Page {page} of {pagination?.totalPages || 1}
+          </span>
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white border border-[#0F3A53]/10 rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="text-xs text-gray-400 uppercase border-b border-gray-100">
-                <th className="py-3 px-4">Invoice ID</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Items</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Due Date</th>
+              <tr className="text-xs text-gray-400 uppercase border-b border-gray-100 bg-slate-50">
+                <th className="py-4 px-4 font-semibold tracking-wider">
+                  Invoice ID
+                </th>
+                <th className="py-4 px-4 font-semibold tracking-wider">
+                  Customer
+                </th>
+                <th className="py-4 px-4 font-semibold tracking-wider">
+                  Items
+                </th>
+                <th className="py-4 px-4 font-semibold tracking-wider">Date</th>
+                <th className="py-4 px-4 font-semibold tracking-wider">
+                  Due Date
+                </th>
                 <th className="py-3 px-4">Amount</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -1164,6 +1367,26 @@ useEffect(() => {
                                 strokeLinejoin="round"
                                 strokeWidth={2}
                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            className="text-gray-400 hover:text-[#0F3A53] hover:cursor-pointer transition"
+                            title="Download PDF"
+                            onClick={() => handleDownloadPDF(inv)}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"
                               />
                             </svg>
                           </button>

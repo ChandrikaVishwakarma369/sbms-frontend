@@ -1,46 +1,36 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-} from "chart.js";
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
-
 const PendingPayments = () => {
-  const payments = [
-    { customer: "Rahul Traders", amount: 5900, dueDate: "15 Mar 2025" },
-    { customer: "Sharma Electronics", amount: 4300, dueDate: "18 Mar 2025" },
-    { customer: "Verma Enterprises", amount: 7200, dueDate: "20 Mar 2025" },
-    { customer: "Amit Enterprises", amount: 3200, dueDate: "22 Mar 2025" },
-  ];
+  const [payments, setPayments] = useState([]);
+  const [totalPending, setTotalPending] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // ⭐ Total Pending
-  const totalPending = payments.reduce((sum, p) => sum + p.amount, 0);
+  useEffect(() => {
+    const fetchPendingPayments = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/invoices/pending", {
+          headers: {
+            // Add credentials if needed, but assuming cookie-based auth is handled by browser
+          },
+        });
+        const result = await response.json();
+        if (result.success) {
+          setPayments(result.data.invoices);
+          setTotalPending(result.data.totalPending);
+        } else {
+          setError(result.message);
+        }
+      } catch (err) {
+        setError("Failed to fetch pending payments");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const chartData = {
-    labels: payments.map((p) => p.customer.split(" ")[0]),
-    datasets: [
-      {
-        label: "Pending ₹",
-        data: payments.map((p) => p.amount),
-        backgroundColor: "#ef4444",
-        borderRadius: 6,
-      },
-    ],
-  };
-
-  const options = {
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { grid: { display: false } },
-      x: { grid: { display: false } },
-    },
-  };
+    fetchPendingPayments();
+  }, []);
 
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -59,28 +49,37 @@ const PendingPayments = () => {
       {/* ⭐ Total Pending */}
       <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4">
         <p className="text-xs text-gray-500">Total Pending Amount</p>
-
-        <h3 className="text-2xl font-bold text-red-500">₹{totalPending}</h3>
+        <h3 className="text-2xl font-bold text-red-500">
+          ₹{loading ? "..." : totalPending.toLocaleString()}
+        </h3>
       </div>
 
       {/* ---------------Customer List-------------- */}
       <div className="space-y-3">
-        {payments.map((item, index) => (
-          <div
-            key={index}
-            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition"
-          >
-            <div>
-              <p className="text-sm font-medium text-gray-700">
-                {item.customer}
-              </p>
-
-              <p className="text-xs text-gray-400">Due: {item.dueDate}</p>
+        {loading ? (
+          <p className="text-center text-gray-400 text-sm py-4">Loading payments...</p>
+        ) : error ? (
+          <p className="text-center text-red-400 text-sm py-4">{error}</p>
+        ) : payments.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-4">No pending payments</p>
+        ) : (
+          payments.map((item, index) => (
+            <div
+              key={item.id || index}
+              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition"
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-700">
+                  {item.customer}
+                </p>
+                <p className="text-xs text-gray-400">Due: {item.dueDate}</p>
+              </div>
+              <span className="font-semibold text-red-500">
+                ₹{item.amount.toLocaleString()}
+              </span>
             </div>
-
-            <span className="font-semibold text-red-500">₹{item.amount}</span>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
