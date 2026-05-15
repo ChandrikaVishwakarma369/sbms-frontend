@@ -7,10 +7,12 @@ import {
   deleteInvoice,
 } from "../services/invoice.service";
 import { getCustomers } from "../services/customer.service";
-import { getProducts } from "../services/product.service";
+import { searchProducts } from "../services/product.service"; 
+import API from "../utils/api";
 import toast from "react-hot-toast";
-import jsPDF from "jspdf"; 
-import autoTable from "jspdf-autotable"; 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 const statusStyles = {
   PAID: "bg-green-100 text-green-700 border border-green-300",
   PENDING: "bg-yellow-100 text-[#d97706] border border-yellow-300",
@@ -42,6 +44,7 @@ const getDaysOverdue = (dueDate) => {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 };
 
+// ── Subtotal without GST ──
 const calcSubtotal = (items) =>
   items.reduce((sum, item) => {
     const qty = parseFloat(item.qty) || 0;
@@ -49,7 +52,31 @@ const calcSubtotal = (items) =>
     return sum + qty * rate;
   }, 0);
 
-const emptyItem = () => ({ name: "", qty: "1", rate: "", showDropdown: false });
+// ── Total GST amount across all items ──
+const calcTotalGstAmount = (items) =>
+  items.reduce((sum, item) => {
+    const qty = parseFloat(item.qty) || 0;
+    const rate = parseFloat(item.rate) || 0;
+    const gstPercent = parseFloat(item.gst) || 0;
+    return sum + (qty * rate * gstPercent) / 100;
+  }, 0);
+
+// ── Per-item amount (with GST) ──
+const calcItemTotal = (item) => {
+  const qty = parseFloat(item.qty) || 0;
+  const rate = parseFloat(item.rate) || 0;
+  const gst = parseFloat(item.gst) || 0;
+  const base = qty * rate;
+  return Math.round(base + (base * gst) / 100);
+};
+
+const emptyItem = () => ({
+  name: "",
+  qty: "1",
+  rate: "",
+  gst: "0",
+  showDropdown: false,
+});
 
 const downloadCSV = (data) => {
   const headers = [
@@ -83,7 +110,7 @@ const downloadCSV = (data) => {
         })
       : "",
     (inv.items || [])
-      .map((it) => `${it.name} x${it.qty} @₹${it.rate}`)
+      .map((it) => `${it.name} x${it.qty} @₹${it.rate} (GST:${it.gst || 0}%)`)
       .join(" | "),
     inv.subtotal,
     inv.gst,
@@ -108,14 +135,12 @@ const emptyForm = {
   date: "",
   dueDate: "",
   items: [emptyItem()],
-  gstPercent: "18",
   status: "PENDING",
   paymentMethod: "",
   notes: "",
 };
 
 export default function Invoices() {
-  // ✅ API se data
   const [invoices, setInvoices] = useState([]);
   const [stats, setStats] = useState({
     totalPaid: 0,
@@ -125,7 +150,6 @@ export default function Invoices() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ Pagination
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const LIMIT = 10;
@@ -144,22 +168,21 @@ export default function Invoices() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [editCustomerSearch, setEditCustomerSearch] = useState("");
-  const [showEditCustomerDropdown, setShowEditCustomerDropdown] =
-    useState(false);
+  const [showEditCustomerDropdown, setShowEditCustomerDropdown] = useState(false);
 
   const [products, setProducts] = useState([]);
+
   useEffect(() => {
     if (showModal || selectedInvoice || editInvoice) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "auto";
     }
-
     return () => {
       document.body.style.overflow = "auto";
     };
   }, [showModal, selectedInvoice, editInvoice]);
-  // ✅ Invoices + Stats fetch — search/filter/page change pe re-fetch
+
   const fetchInvoices = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -182,39 +205,37 @@ export default function Invoices() {
     fetchInvoices();
   }, [fetchInvoices]);
 
-  // ✅ Customers + Products ek baar load
   useEffect(() => {
     const loadDropdownData = async () => {
       try {
-        const [customersData, productsData] = await Promise.all([
-          getCustomers(),
-          getProducts(),
-        ]);
-        setCustomers(customersData || []);
-        setProducts(productsData || []);
+        const customersData = await getCustomers();
+        const extractedCustomers =
+          customersData?.data?.customers ||
+          customersData?.customers ||
+          (Array.isArray(customersData?.data)
+            ? customersData.data
+            : Array.isArray(customersData)
+            ? customersData
+            : []);
+        setCustomers(extractedCustomers);
       } catch (err) {
-        console.error("Failed to load dropdown data", err);
+        console.error("Failed to load customers data", err);
+      }
+
+      try {
+        const res = await API.get("/products");
+        const productsData = res.data?.products || (Array.isArray(res.data) ? res.data : []);
+        setProducts(productsData);
+      } catch (err) {
+        console.error("Failed to load products data", err);
       }
     };
     loadDropdownData();
   }, []);
 
-  // ✅ Search/filter change pe page 1 pe jaao
   useEffect(() => {
     setPage(1);
   }, [search, statusFilter]);
-
-  const subtotalNum = Math.round(calcSubtotal(form.items || []));
-  const gstAmount = Math.round(
-    (subtotalNum * (parseFloat(form.gstPercent) || 0)) / 100,
-  );
-  const totalPreview = subtotalNum + gstAmount;
-
-  const editSubtotalNum = Math.round(calcSubtotal(editForm.items || []));
-  const editGstAmount = Math.round(
-    (editSubtotalNum * (parseFloat(editForm.gstPercent) || 0)) / 100,
-  );
-  const editTotalPreview = editSubtotalNum + editGstAmount;
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -243,80 +264,164 @@ export default function Invoices() {
     setEditErrors({ ...editErrors, customerName: "" });
   };
 
-  const handleItemChange = (index, field, value) => {
-    const updated = form.items.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item,
-    );
-    setForm({ ...form, items: updated });
-    if (errors[`item_${index}_${field}`]) {
-      setErrors({ ...errors, [`item_${index}_${field}`]: "" });
+  const handleProductSearch = async (keyword) => {
+    if (!keyword.trim()) {
+      return;
+    }
+    try {
+      const res = await searchProducts({ keyword });
+      const extractedProducts =
+        res?.data?.products ||
+        res?.products ||
+        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
+      if(extractedProducts.length > 0){
+        setProducts(extractedProducts);
+      }
+    } catch (err) {
+      console.error("Failed to search products", err);
+    }
+  };
+
+  const handleItemChange = (index, field, value, isEdit = false) => {
+    if (isEdit) {
+      setEditForm((prev) => ({
+        ...prev,
+        items: prev.items.map((item, i) =>
+          i === index ? { ...item, [field]: value } : item
+        ),
+      }));
+      if (editErrors[`item_${index}_${field}`]) {
+        setEditErrors((prev) => ({ ...prev, [`item_${index}_${field}`]: "" }));
+      }
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        items: prev.items.map((item, i) =>
+          i === index ? { ...item, [field]: value } : item
+        ),
+      }));
+      if (errors[`item_${index}_${field}`]) {
+        setErrors((prev) => ({ ...prev, [`item_${index}_${field}`]: "" }));
+      }
     }
   };
 
   const handleProductSelect = (index, product, isEdit = false) => {
-    const price = product.price ? String(product.price) : "";
+    const price = product.price ? String(product.price) : "0";
+    const gst = product.gst !== undefined ? String(product.gst) : "0";
+
     if (isEdit) {
-      const updated = editForm.items.map((item, i) =>
-        i === index
-          ? { ...item, name: product.name, rate: price, showDropdown: false }
-          : item,
-      );
-      setEditForm({ ...editForm, items: updated });
+      setEditForm((prev) => ({
+        ...prev,
+        items: prev.items.map((item, i) =>
+          i === index
+            ? { ...item, name: product.name, rate: price, gst: gst, showDropdown: false }
+            : item
+        ),
+      }));
     } else {
-      const updated = form.items.map((item, i) =>
-        i === index
-          ? { ...item, name: product.name, rate: price, showDropdown: false }
-          : item,
-      );
-      setForm({ ...form, items: updated });
+      setForm((prev) => ({
+        ...prev,
+        items: prev.items.map((item, i) =>
+          i === index
+            ? { ...item, name: product.name, rate: price, gst: gst, showDropdown: false }
+            : item
+        ),
+      }));
     }
   };
 
   const handleItemDropdownToggle = (index, val, isEdit = false) => {
     if (isEdit) {
-      const updated = editForm.items.map((item, i) =>
-        i === index ? { ...item, showDropdown: val } : item,
-      );
-      setEditForm({ ...editForm, items: updated });
+      setEditForm((prev) => ({
+        ...prev,
+        items: prev.items.map((item, i) =>
+          i === index ? { ...item, showDropdown: val } : item
+        ),
+      }));
     } else {
-      const updated = form.items.map((item, i) =>
-        i === index ? { ...item, showDropdown: val } : item,
-      );
-      setForm({ ...form, items: updated });
+      setForm((prev) => ({
+        ...prev,
+        items: prev.items.map((item, i) =>
+          i === index ? { ...item, showDropdown: val } : item
+        ),
+      }));
     }
   };
 
-  const handleAddItem = () =>
-    setForm({ ...form, items: [...form.items, emptyItem()] });
-
-  const handleRemoveItem = (index) => {
-    if (form.items.length === 1) return;
-    setForm({ ...form, items: form.items.filter((_, i) => i !== index) });
+  const handleAddItem = (isEdit = false) => {
+    if (isEdit) {
+      setEditForm((prev) => ({ ...prev, items: [...prev.items, emptyItem()] }));
+    } else {
+      setForm((prev) => ({ ...prev, items: [...prev.items, emptyItem()] }));
+    }
   };
 
-  const validate = () => {
+  const handleRemoveItem = (index, isEdit = false) => {
+    if (isEdit) {
+      setEditForm((prev) => {
+        if (prev.items.length === 1) return prev;
+        return { ...prev, items: prev.items.filter((_, i) => i !== index) };
+      });
+    } else {
+      setForm((prev) => {
+        if (prev.items.length === 1) return prev;
+        return { ...prev, items: prev.items.filter((_, i) => i !== index) };
+      });
+    }
+  };
+
+  const validate = (f = form) => {
     const e = {};
-    if (!form.customerName.trim()) e.customerName = "Customer name is required";
-    if (!form.date) e.date = "Date is required";
-    if (
-      form.dueDate &&
-      form.date &&
-      new Date(form.dueDate) < new Date(form.date)
-    )
+    if (!f.customerName.trim()) e.customerName = "Customer name is required";
+    if (!f.date) e.date = "Date is required";
+    if (f.dueDate && f.date && new Date(f.dueDate) < new Date(f.date))
       e.dueDate = "Due date cannot be before invoice date";
-    form.items.forEach((item, i) => {
+    f.items.forEach((item, i) => {
       if (!item.name.trim()) e[`item_${i}_name`] = "Product name required";
       if (!item.qty || isNaN(item.qty) || Number(item.qty) <= 0)
         e[`item_${i}_qty`] = "Invalid qty";
-      if (!item.rate || isNaN(item.rate) || Number(item.rate) <= 0)
+      if (!item.rate || isNaN(item.rate) || Number(item.rate) < 0)
         e[`item_${i}_rate`] = "Invalid rate";
     });
     return e;
   };
 
-  // ✅ CREATE — API call
+  // ✅ PERFECT PAYLOAD FIX: Backend ko waisa hi data bhejna jaisa wo chahta hai
+  const buildPayload = (f) => {
+    const cleanItems = f.items.map((item) => ({
+      name: item.name.trim(),
+      qty: parseFloat(item.qty),
+      rate: parseFloat(item.rate),
+      // Backend ko 'gst' object ke andar pasand nahi hai, isko hata rahe hain
+      // Amount wapas purana wala rakha (bina tax wala) taaki backend fail na ho
+      amount: Math.round(parseFloat(item.qty) * parseFloat(item.rate)),
+    }));
+
+    const subTotal = calcSubtotal(f.items);
+    const totalGst = calcTotalGstAmount(f.items);
+    const grandTotal = subTotal + totalGst;
+    const equivalentGstPercent = subTotal > 0 ? (totalGst / subTotal) * 100 : 0;
+    
+    return {
+      customerName: f.customerName.trim(),
+      customerGst: f.customerGst || null,
+      date: f.date,
+      dueDate: f.dueDate || null,
+      items: cleanItems,
+      // Total amount explicitly pass kar diya jisse calculation matching easy ho jaye
+      subtotal: subTotal,
+      gst: totalGst,
+      total: grandTotal,
+      gstPercent: parseFloat(equivalentGstPercent.toFixed(2)), 
+      status: f.status,
+      paymentMethod: f.paymentMethod || null,
+      notes: f.notes.trim() || null,
+    };
+  };
+
   const handleSubmit = async () => {
-    const e = validate();
+    const e = validate(form);
     if (Object.keys(e).length) {
       setErrors(e);
       return;
@@ -324,38 +429,22 @@ export default function Invoices() {
 
     setIsSubmitting(true);
     try {
-      const cleanItems = form.items.map((item) => ({
-        name: item.name.trim(),
-        qty: parseFloat(item.qty),
-        rate: parseFloat(item.rate),
-        amount: Math.round(parseFloat(item.qty) * parseFloat(item.rate)),
-      }));
-
-      const payload = {
-        customerName: form.customerName.trim(),
-        customerGst: form.customerGst || null,
-        date: form.date,
-        dueDate: form.dueDate || null,
-        items: cleanItems,
-        gstPercent: parseFloat(form.gstPercent),
-        status: form.status,
-        paymentMethod: form.paymentMethod || null,
-        notes: form.notes.trim() || null,
-      };
-
+      const payload = buildPayload(form);
       const res = await createInvoice(payload);
+      
       if (res.success) {
         toast.success("Invoice created successfully!");
         setShowModal(false);
         setForm(emptyForm);
         setCustomerSearch("");
         setErrors({});
-        fetchInvoices(); // ✅ List refresh
+        fetchInvoices();
       } else {
         toast.error(res.message || "Failed to create invoice");
       }
     } catch (err) {
       toast.error("Something went wrong");
+      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -382,21 +471,10 @@ export default function Invoices() {
               name: it.name,
               qty: String(it.qty),
               rate: String(it.rate),
+              gst: String(it.gst || 0),
               showDropdown: false,
             }))
-          : [
-              {
-                name: "Service",
-                qty: "1",
-                rate: String(inv.subtotal),
-                showDropdown: false,
-              },
-            ],
-      gstPercent: inv.gstPercent
-        ? String(inv.gstPercent)
-        : inv.gst > 0
-          ? String(Math.round((inv.gst / inv.subtotal) * 100))
-          : "18",
+          : [emptyItem()],
       status: inv.status,
       paymentMethod: inv.paymentMethod || "",
       notes: inv.notes || "",
@@ -409,92 +487,20 @@ export default function Invoices() {
     setEditErrors({ ...editErrors, [e.target.name]: "" });
   };
 
-  const handleEditItemChange = (index, field, value) => {
-    const updated = editForm.items.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item,
-    );
-    setEditForm({ ...editForm, items: updated });
-    if (editErrors[`item_${index}_${field}`]) {
-      setEditErrors({ ...editErrors, [`item_${index}_${field}`]: "" });
-    }
-  };
-
-  const handleEditAddItem = () =>
-    setEditForm({ ...editForm, items: [...editForm.items, emptyItem()] });
-
-  const handleEditRemoveItem = (index) => {
-    if (editForm.items.length === 1) return;
-    setEditForm({
-      ...editForm,
-      items: editForm.items.filter((_, i) => i !== index),
-    });
-  };
-
-  const validateEdit = () => {
-    const e = {};
-    if (!editForm.customerName.trim())
-      e.customerName = "Customer name is required";
-    if (!editForm.date) e.date = "Date is required";
-    if (
-      editForm.dueDate &&
-      editForm.date &&
-      new Date(editForm.dueDate) < new Date(editForm.date)
-    )
-      e.dueDate = "Due date cannot be before invoice date";
-    editForm.items.forEach((item, i) => {
-      if (!item.name.trim()) e[`item_${i}_name`] = "Product name required";
-      if (!item.qty || isNaN(item.qty) || Number(item.qty) <= 0)
-        e[`item_${i}_qty`] = "Invalid qty";
-      if (!item.rate || isNaN(item.rate) || Number(item.rate) <= 0)
-        e[`item_${i}_rate`] = "Invalid rate";
-    });
-    return e;
-  };
-
-  // ✅ UPDATE — API call
   const handleEditSubmit = async () => {
-    const e = validateEdit();
+    const e = validate(editForm);
     if (Object.keys(e).length) {
       setEditErrors(e);
       return;
     }
-
     setIsSubmitting(true);
     try {
-      const cleanItems = editForm.items.map((item) => ({
-        name: item.name.trim(),
-        qty: parseFloat(item.qty),
-        rate: parseFloat(item.rate),
-        amount: Math.round(parseFloat(item.qty) * parseFloat(item.rate)),
-      }));
-
-      const payload = {
-        customerName: editForm.customerName.trim(),
-        customerGst: editForm.customerGst || null,
-        date: editForm.date,
-        dueDate: editForm.dueDate || null,
-        items: cleanItems,
-        gstPercent: parseFloat(editForm.gstPercent),
-        status: editForm.status,
-        paymentMethod: editForm.paymentMethod || null,
-        notes: editForm.notes.trim() || null,
-      };
-
+      const payload = buildPayload(editForm);
       const res = await updateInvoice(editInvoice._id, payload);
-
+      
       if (res.success) {
         toast.success("Invoice updated successfully!");
-
-        // ✅ IMPORTANT: Local state update (instant UI change)
-        setInvoices((prev) =>
-          prev.map((inv) =>
-            inv._id === editInvoice._id ? { ...inv, ...payload } : inv,
-          ),
-        );
-
-        // ✅ Optional: stats bhi update kar sakti hai (ya refetch)
         fetchInvoices();
-
         setEditInvoice(null);
         setEditForm({});
         setEditCustomerSearch("");
@@ -508,19 +514,19 @@ export default function Invoices() {
       setIsSubmitting(false);
     }
   };
+
   const handleEditClose = () => {
     setEditInvoice(null);
     setEditForm({});
     setEditCustomerSearch("");
     setEditErrors({});
   };
-  // ✅ NEW: PDF download
+
   const handleDownloadPDF = (inv) => {
     const doc = new jsPDF();
     const effectiveStatus = getEffectiveStatus(inv);
 
-    // ── Header ──────────────────────────────────────
-    doc.setFillColor(15, 58, 83); // #0F3A53
+    doc.setFillColor(15, 58, 83);
     doc.rect(0, 0, 210, 32, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
@@ -536,7 +542,6 @@ export default function Invoices() {
     doc.setFontSize(9);
     doc.text(`Status: ${effectiveStatus}`, 196, 22, { align: "right" });
 
-    // ── Invoice Info ─────────────────────────────────
     doc.setTextColor(50, 50, 50);
     doc.setFontSize(10);
     let y = 44;
@@ -573,24 +578,23 @@ export default function Invoices() {
       ry += 7;
     });
 
-    // ── Divider ──────────────────────────────────────
     y = Math.max(y, ry) + 4;
     doc.setDrawColor(220, 220, 220);
     doc.line(14, y, 196, y);
     y += 6;
 
-    // ── Items Table ──────────────────────────────────
     const tableRows = (inv.items || []).map((item, i) => [
       i + 1,
       item.name,
       item.qty,
       `Rs. ${Number(item.rate).toLocaleString("en-IN")}`,
+      `${item.gst || 0}%`,
       `Rs. ${Number(item.amount).toLocaleString("en-IN")}`,
     ]);
 
     autoTable(doc, {
       startY: y,
-      head: [["#", "Product / Service", "Qty", "Rate", "Amount"]],
+      head: [["#", "Product / Service", "Qty", "Rate", "GST", "Amount"]],
       body: tableRows,
       theme: "striped",
       headStyles: {
@@ -602,22 +606,19 @@ export default function Invoices() {
       bodyStyles: { fontSize: 9, textColor: [40, 40, 40] },
       columnStyles: {
         0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 80 },
-        2: { cellWidth: 20, halign: "center" },
-        3: { cellWidth: 35, halign: "right" },
-        4: { cellWidth: 35, halign: "right" },
+        1: { cellWidth: 70 },
+        2: { cellWidth: 15, halign: "center" },
+        3: { cellWidth: 30, halign: "right" },
+        4: { cellWidth: 15, halign: "center" },
+        5: { cellWidth: 35, halign: "right" },
       },
       margin: { left: 14, right: 14 },
     });
 
-    // ── Totals ───────────────────────────────────────
     const finalY = doc.lastAutoTable.finalY + 6;
     const totals = [
       ["Subtotal", `Rs. ${Number(inv.subtotal).toLocaleString("en-IN")}`],
-      [
-        `GST (${inv.gstPercent || 18}%)`,
-        `Rs. ${Number(inv.gst).toLocaleString("en-IN")}`,
-      ],
+      ["Total GST", `Rs. ${Number(inv.gst).toLocaleString("en-IN")}`],
     ];
 
     totals.forEach(([label, value], idx) => {
@@ -630,7 +631,6 @@ export default function Invoices() {
       doc.text(value, 196, ty, { align: "right" });
     });
 
-    // Total row
     const totalY = finalY + totals.length * 7 + 2;
     doc.setFillColor(15, 58, 83);
     doc.roundedRect(130, totalY - 5, 66, 10, 2, 2, "F");
@@ -642,10 +642,9 @@ export default function Invoices() {
       `Rs. ${Number(inv.total).toLocaleString("en-IN")}`,
       194,
       totalY + 1,
-      { align: "right" },
+      { align: "right" }
     );
 
-    // ── Notes ────────────────────────────────────────
     if (inv.notes) {
       const notesY = totalY + 16;
       doc.setTextColor(100, 100, 100);
@@ -658,163 +657,239 @@ export default function Invoices() {
       doc.text(noteLines, 14, notesY + 5);
     }
 
-    // ── Footer ───────────────────────────────────────
     doc.setFillColor(15, 58, 83);
     doc.rect(0, 285, 210, 12, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.text("Generated by SBMS — Smart Business Management System", 105, 292, {
-      align: "center",
-    });
+    doc.text(
+      "Generated by SBMS — Smart Business Management System",
+      105,
+      292,
+      { align: "center" }
+    );
 
     doc.save(
-      `${inv.invoiceId || "invoice"}_${inv.customerName.replace(/\s+/g, "_")}.pdf`,
+      `${inv.invoiceId || "invoice"}_${inv.customerName.replace(/\s+/g, "_")}.pdf`
     );
     toast.success("Invoice PDF downloaded!");
   };
+
   const renderLineItems = (
     items,
     onItemChange,
     onAdd,
     onRemove,
     errs,
-    isEdit = false,
-  ) => (
-    <div>
-      <div className="flex justify-between items-center mb-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Products / Services <span className="text-red-500">*</span>
-        </label>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="text-xs text-[#0F3A53] font-medium hover:underline hover:cursor-pointer"
-        >
-          + Add Item
-        </button>
-      </div>
-      <div className="grid grid-cols-12 gap-1 mb-1 px-1">
-        <span className="col-span-5 text-xs text-gray-400">
-          Product / Service
-        </span>
-        <span className="col-span-2 text-xs text-gray-400">Qty</span>
-        <span className="col-span-3 text-xs text-gray-400">Rate (₹)</span>
-        <span className="col-span-2 text-xs text-gray-400 text-right">Amt</span>
-      </div>
-      <div className="space-y-2">
-        {items.map((item, i) => {
-          const amt = Math.round(
-            (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0),
-          );
-          const hasErr =
-            errs[`item_${i}_name`] ||
-            errs[`item_${i}_qty`] ||
-            errs[`item_${i}_rate`];
-          const filteredProducts = products.filter((p) =>
-            p.name.toLowerCase().includes((item.name || "").toLowerCase()),
-          );
-          return (
-            <div key={i}>
-              <div className="grid grid-cols-12 gap-1 items-center">
-                <div className="col-span-5 relative">
+    isEdit = false
+  ) => {
+    const subtotal = Math.round(calcSubtotal(items));
+    const gstTotal = Math.round(calcTotalGstAmount(items));
+    const grandTotal = subtotal + gstTotal;
+
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Products / Services <span className="text-red-500">*</span>
+          </label>
+          <button
+            type="button"
+            onClick={() => onAdd(isEdit)}
+            className="flex items-center gap-1 text-xs font-semibold text-white bg-[#0F3A53] hover:bg-[#0a2e42] px-3 py-1.5 rounded-lg transition hover:cursor-pointer"
+          >
+            <span className="text-base leading-none">+</span> Add Item
+          </button>
+        </div>
+
+        <div className="grid grid-cols-12 gap-1 mb-1 px-1">
+          <span className="col-span-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Product / Service
+          </span>
+          <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Qty
+          </span>
+          <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Rate (₹)
+          </span>
+          <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            GST %
+          </span>
+          <span className="col-span-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">
+            Amt (incl. GST)
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {items.map((item, i) => {
+            const itemTotal = calcItemTotal(item);
+            const hasErr =
+              errs[`item_${i}_name`] ||
+              errs[`item_${i}_qty`] ||
+              errs[`item_${i}_rate`];
+
+            const filteredProducts = products.filter((p) =>
+              (p?.name || "").toLowerCase().includes((item.name || "").toLowerCase())
+            );
+
+            return (
+              <div key={i}>
+                <div className="grid grid-cols-12 gap-1 items-center">
+                  <div className="col-span-4 relative">
+                    <input
+                      type="text"
+                      value={item.name || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        onItemChange(i, "name", val, isEdit);
+                        handleItemDropdownToggle(i, true, isEdit);
+                        // Optional search lag fix, only search after 3 words or let local filter handle it
+                        if(val.length > 2) handleProductSearch(val);
+                      }}
+                      onFocus={() => {
+                        handleItemDropdownToggle(i, true, isEdit);
+                      }}
+                      onBlur={() =>
+                        setTimeout(
+                          () => handleItemDropdownToggle(i, false, isEdit),
+                          200
+                        )
+                      }
+                      placeholder="Search product..."
+                      autoComplete="off"
+                      className={`w-full border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53] bg-white ${
+                        errs[`item_${i}_name`]
+                          ? "border-red-400"
+                          : "border-gray-200"
+                      }`}
+                    />
+
+                    {item.showDropdown && (
+                      <div className="absolute z-50 top-full left-0 w-72 mt-0.5 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                        {filteredProducts.length === 0 ? (
+                          <div className="px-3 py-3 text-xs text-gray-400 text-center">
+                            No products found
+                          </div>
+                        ) : (
+                          filteredProducts.map((p) => (
+                            <button
+                              key={p.id || p._id}
+                              type="button"
+                              onMouseDown={() =>
+                                handleProductSelect(i, p, isEdit)
+                              }
+                              className="w-full text-left px-3 py-2.5 hover:bg-[#0F3A53]/5 hover:cursor-pointer transition border-b border-gray-50 last:border-0"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-semibold text-gray-800 truncate">
+                                  {p.name}
+                                </span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                                    GST {p.gst || 0}%
+                                  </span>
+                                  <span className="text-xs font-bold text-[#0F3A53]">
+                                    ₹{Number(p.price).toLocaleString("en-IN")}
+                                  </span>
+                                </div>
+                              </div>
+                              {p.category && (
+                                <div className="text-xs text-gray-400 mt-0.5">
+                                  {p.category}
+                                </div>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => {
-                      onItemChange(i, "name", e.target.value);
-                      handleItemDropdownToggle(i, true, isEdit);
-                    }}
-                    onFocus={() => handleItemDropdownToggle(i, true, isEdit)}
-                    onBlur={() =>
-                      setTimeout(
-                        () => handleItemDropdownToggle(i, false, isEdit),
-                        200,
-                      )
-                    }
-                    placeholder="e.g. Web Design"
-                    className={`w-full border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${errs[`item_${i}_name`] ? "border-red-400" : "border-gray-200"}`}
+                    type="number"
+                    value={item.qty}
+                    onChange={(e) => onItemChange(i, "qty", e.target.value, isEdit)}
+                    min="0.01"
+                    step="0.01"
+                    className={`col-span-2 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${
+                      errs[`item_${i}_qty`]
+                        ? "border-red-400"
+                        : "border-gray-200"
+                    }`}
                   />
-                  {item.showDropdown && (
-                    <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded-lg shadow-lg max-h-36 overflow-y-auto">
-                      {filteredProducts.length === 0 ? (
-                        <div className="px-3 py-2 text-xs text-gray-400">
-                          No products found
-                        </div>
-                      ) : (
-                        filteredProducts.map((p) => (
-                          <button
-                            key={p.id || p._id}
-                            type="button"
-                            onMouseDown={() =>
-                              handleProductSelect(i, p, isEdit)
-                            }
-                            className="w-full text-left px-3 py-2 hover:bg-slate-50 hover:cursor-pointer transition border-b border-gray-50 last:border-0"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-700">
-                                {p.name}
-                              </span>
-                              <span className="text-xs text-[#0F3A53] font-semibold">
-                                ₹{Number(p.price).toLocaleString("en-IN")}
-                              </span>
-                            </div>
-                            {p.category && (
-                              <span className="text-xs text-gray-400">
-                                {p.category}
-                              </span>
-                            )}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
+
+                  <input
+                    type="number"
+                    value={item.rate}
+                    onChange={(e) => onItemChange(i, "rate", e.target.value, isEdit)}
+                    min="0"
+                    placeholder="0"
+                    className={`col-span-2 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${
+                      errs[`item_${i}_rate`]
+                        ? "border-red-400"
+                        : "border-gray-200"
+                    }`}
+                  />
+
+                  <input
+                    type="number"
+                    value={item.gst}
+                    onChange={(e) => onItemChange(i, "gst", e.target.value, isEdit)}
+                    min="0"
+                    placeholder="0"
+                    className="col-span-2 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53]"
+                  />
+
+                  <div className="col-span-2 flex items-center justify-end gap-1">
+                    <span className="text-xs font-semibold text-[#0F3A53]">
+                      {itemTotal > 0
+                        ? `₹${itemTotal.toLocaleString("en-IN")}`
+                        : "—"}
+                    </span>
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => onRemove(i, isEdit)}
+                        className="text-gray-300 hover:text-red-500 hover:cursor-pointer text-lg leading-none ml-1 transition"
+                        title="Remove item"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <input
-                  type="number"
-                  value={item.qty}
-                  onChange={(e) => onItemChange(i, "qty", e.target.value)}
-                  min="0.01"
-                  step="0.01"
-                  className={`col-span-2 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${errs[`item_${i}_qty`] ? "border-red-400" : "border-gray-200"}`}
-                />
-                <input
-                  type="number"
-                  value={item.rate}
-                  onChange={(e) => onItemChange(i, "rate", e.target.value)}
-                  min="0"
-                  placeholder="0"
-                  className={`col-span-3 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${errs[`item_${i}_rate`] ? "border-red-400" : "border-gray-200"}`}
-                />
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  <span className="text-xs font-medium text-gray-700">
-                    {amt > 0 ? `₹${amt.toLocaleString("en-IN")}` : "—"}
-                  </span>
-                  {items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => onRemove(i)}
-                      className="text-gray-300 hover:text-red-400 hover:cursor-pointer text-base leading-none ml-1"
-                      title="Remove"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
+
+                {hasErr && (
+                  <p className="text-red-500 text-xs mt-0.5 pl-1">
+                    {errs[`item_${i}_name`] ||
+                      errs[`item_${i}_qty`] ||
+                      errs[`item_${i}_rate`]}
+                  </p>
+                )}
               </div>
-              {hasErr && (
-                <p className="text-red-500 text-xs mt-0.5 pl-1">
-                  {errs[`item_${i}_name`] ||
-                    errs[`item_${i}_qty`] ||
-                    errs[`item_${i}_rate`]}
-                </p>
-              )}
+            );
+          })}
+        </div>
+
+        {subtotal > 0 && (
+          <div className="mt-4 pt-3 border-t border-dashed border-gray-200 space-y-1.5">
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>Subtotal (excl. GST)</span>
+              <span className="font-medium">{formatAmount(subtotal)}</span>
             </div>
-          );
-        })}
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>Total GST</span>
+              <span className="font-medium">{formatAmount(gstTotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-bold text-[#0F3A53] pt-1.5 border-t border-gray-200">
+              <span>Grand Total (incl. GST)</span>
+              <span className="text-base">{formatAmount(grandTotal)}</span>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderCustomerField = (
     searchVal,
@@ -823,12 +898,16 @@ export default function Invoices() {
     setShowDropdown,
     onSelect,
     selectedGst,
-    errs,
+    errs
   ) => {
     const filteredCustomers = customers.filter(
       (c) =>
-        c.name.toLowerCase().includes(searchVal.toLowerCase()) ||
-        (c.gstNumber || "").toLowerCase().includes(searchVal.toLowerCase()),
+        (c?.name || "")
+          .toLowerCase()
+          .includes((searchVal || "").toLowerCase()) ||
+        (c?.gstNumber || "")
+          .toLowerCase()
+          .includes((searchVal || "").toLowerCase())
     );
     return (
       <div>
@@ -846,10 +925,12 @@ export default function Invoices() {
             onFocus={() => setShowDropdown(true)}
             onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
             placeholder="Search customer..."
-            className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${errs.customerName ? "border-red-400" : "border-gray-200"}`}
+            className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${
+              errs.customerName ? "border-red-400" : "border-gray-200"
+            }`}
           />
           {showDropdown && searchVal && (
-            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
               {filteredCustomers.length === 0 ? (
                 <div className="px-4 py-3 text-xs text-gray-400">
                   No customers found
@@ -899,15 +980,6 @@ export default function Invoices() {
             </span>
           </div>
         )}
-        {searchVal &&
-          !selectedGst &&
-          customers.find((c) => c.name === searchVal) && (
-            <div className="mt-2 flex items-center gap-2 bg-slate-50 border border-gray-200 rounded-lg px-3 py-2">
-              <span className="text-xs text-gray-400">
-                This customer has no GST number registered
-              </span>
-            </div>
-          )}
       </div>
     );
   };
@@ -919,128 +991,71 @@ export default function Invoices() {
     onItemChange,
     onAdd,
     onRemove,
-    isEdit = false,
-  ) => {
-    const sub = Math.round(calcSubtotal(f.items || []));
-    const gst = Math.round((sub * (parseFloat(f.gstPercent) || 0)) / 100);
-    const tot = sub + gst;
-    return (
-      <div className="space-y-4">
-        {isEdit
-          ? renderCustomerField(
-              editCustomerSearch,
-              setEditCustomerSearch,
-              showEditCustomerDropdown,
-              setShowEditCustomerDropdown,
-              handleEditCustomerSelect,
-              f.customerGst,
-              errs,
-            )
-          : renderCustomerField(
-              customerSearch,
-              setCustomerSearch,
-              showCustomerDropdown,
-              setShowCustomerDropdown,
-              handleCustomerSelect,
-              f.customerGst,
-              errs,
-            )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Invoice Date <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              name="date"
-              value={f.date}
-              onChange={onChange}
-              className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${errs.date ? "border-red-400" : "border-gray-200"}`}
-            />
-            {errs.date && (
-              <p className="text-red-500 text-xs mt-1">{errs.date}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Due Date
-            </label>
-            <input
-              type="date"
-              name="dueDate"
-              value={f.dueDate}
-              onChange={onChange}
-              className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${errs.dueDate ? "border-red-400" : "border-gray-200"}`}
-            />
-            {errs.dueDate && (
-              <p className="text-red-500 text-xs mt-1">{errs.dueDate}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="border border-gray-100 rounded-xl p-3 bg-slate-50">
-          {renderLineItems(
-            f.items,
-            onItemChange,
-            onAdd,
-            onRemove,
-            errs,
-            isEdit,
+    isEdit = false
+  ) => (
+    <div className="space-y-4">
+      {isEdit
+        ? renderCustomerField(
+            editCustomerSearch,
+            setEditCustomerSearch,
+            showEditCustomerDropdown,
+            setShowEditCustomerDropdown,
+            handleEditCustomerSelect,
+            f.customerGst,
+            errs
+          )
+        : renderCustomerField(
+            customerSearch,
+            setCustomerSearch,
+            showCustomerDropdown,
+            setShowCustomerDropdown,
+            handleCustomerSelect,
+            f.customerGst,
+            errs
           )}
-          {sub > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-200 space-y-1">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Subtotal</span>
-                <span>{formatAmount(sub)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>GST ({f.gstPercent}%)</span>
-                <span>{formatAmount(gst)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-bold text-[#0F3A53]">
-                <span>Total</span>
-                <span>{formatAmount(tot)}</span>
-              </div>
-            </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Invoice Date <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            name="date"
+            value={f.date}
+            onChange={onChange}
+            className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${
+              errs.date ? "border-red-400" : "border-gray-200"
+            }`}
+          />
+          {errs.date && (
+            <p className="text-red-500 text-xs mt-1">{errs.date}</p>
           )}
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              GST (%)
-            </label>
-            <select
-              name="gstPercent"
-              value={f.gstPercent}
-              onChange={onChange}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] hover:cursor-pointer"
-            >
-              <option value="0">0%</option>
-              <option value="5">5%</option>
-              <option value="12">12%</option>
-              <option value="18">18%</option>
-              <option value="28">28%</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              name="status"
-              value={f.status}
-              onChange={onChange}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] hover:cursor-pointer"
-            >
-              <option value="PENDING">PENDING</option>
-              <option value="PAID">PAID</option>
-              <option value="OVERDUE">OVERDUE</option>
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Due Date
+          </label>
+          <input
+            type="date"
+            name="dueDate"
+            value={f.dueDate}
+            onChange={onChange}
+            className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${
+              errs.dueDate ? "border-red-400" : "border-gray-200"
+            }`}
+          />
+          {errs.dueDate && (
+            <p className="text-red-500 text-xs mt-1">{errs.dueDate}</p>
+          )}
         </div>
+      </div>
 
+      <div className="border border-gray-100 rounded-xl p-3 bg-slate-50">
+        {renderLineItems(f.items, onItemChange, onAdd, onRemove, errs, isEdit)}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Payment Method
@@ -1059,27 +1074,41 @@ export default function Invoices() {
             <option value="Card">Card</option>
           </select>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Notes / Description
+            Status
           </label>
-          <textarea
-            name="notes"
-            value={f.notes}
+          <select
+            name="status"
+            value={f.status}
             onChange={onChange}
-            rows={2}
-            placeholder="e.g. Thank you for your business"
-            className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] resize-none"
-          />
+            className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] hover:cursor-pointer"
+          >
+            <option value="PENDING">PENDING</option>
+            <option value="PAID">PAID</option>
+            <option value="OVERDUE">OVERDUE</option>
+          </select>
         </div>
       </div>
-    );
-  };
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notes / Description
+        </label>
+        <textarea
+          name="notes"
+          value={f.notes}
+          onChange={onChange}
+          rows={2}
+          placeholder="e.g. Thank you for your business"
+          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3A53] resize-none"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-[#f3f4f6] min-h-screen p-4 md:p-8 space-y-6">
-      {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#0F3A53] tracking-tight">
@@ -1098,7 +1127,7 @@ export default function Invoices() {
           </button>
           <button
             onClick={() => setShowModal(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0F3A53] hover:bg-[#0a2e42] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0F3A53] hover:bg-[#0a2e42] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg hover:cursor-pointer"
           >
             <span className="text-lg leading-none">+</span>
             New Invoice
@@ -1106,7 +1135,6 @@ export default function Invoices() {
         </div>
       </div>
 
-      {/* Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {[
           {
@@ -1150,7 +1178,6 @@ export default function Invoices() {
         ))}
       </div>
 
-      {/* Filters Section */}
       <div className="bg-white border border-[#0F3A53]/10 rounded-2xl px-5 py-4 mb-4 flex flex-col md:flex-row gap-4 items-stretch md:items-end shadow-sm">
         <div className="flex-1 min-w-0 md:min-w-[300px]">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
@@ -1177,7 +1204,7 @@ export default function Invoices() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full bg-slate-100 border border-[#0F3A53]/20 rounded-xl px-4 py-2.5 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition"
+            className="w-full bg-slate-100 border border-[#0F3A53]/20 rounded-xl px-4 py-2.5 text-sm text-[#0F3A53] focus:outline-none focus:ring-2 focus:ring-[#0F3A53]/30 transition hover:cursor-pointer"
           >
             <option>All Status</option>
             <option>PAID</option>
@@ -1193,7 +1220,6 @@ export default function Invoices() {
         </div>
       </div>
 
-      {/* Table Section */}
       <div className="bg-white border border-[#0F3A53]/10 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-sm text-left">
@@ -1208,7 +1234,9 @@ export default function Invoices() {
                 <th className="py-4 px-4 font-semibold tracking-wider">
                   Items
                 </th>
-                <th className="py-4 px-4 font-semibold tracking-wider">Date</th>
+                <th className="py-4 px-4 font-semibold tracking-wider">
+                  Date
+                </th>
                 <th className="py-4 px-4 font-semibold tracking-wider">
                   Due Date
                 </th>
@@ -1220,13 +1248,19 @@ export default function Invoices() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="text-center text-gray-400 py-8">
+                  <td
+                    colSpan={8}
+                    className="text-center text-gray-400 py-8"
+                  >
                     Loading invoices...
                   </td>
                 </tr>
               ) : invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center text-gray-400 py-8">
+                  <td
+                    colSpan={8}
+                    className="text-center text-gray-400 py-8"
+                  >
                     No invoices found.
                   </td>
                 </tr>
@@ -1234,7 +1268,8 @@ export default function Invoices() {
                 invoices.map((inv) => {
                   const effectiveStatus = getEffectiveStatus(inv);
                   const isAutoOverdue =
-                    effectiveStatus === "OVERDUE" && inv.status === "PENDING";
+                    effectiveStatus === "OVERDUE" &&
+                    inv.status === "PENDING";
                   const daysOverdue =
                     isAutoOverdue && inv.dueDate
                       ? getDaysOverdue(inv.dueDate)
@@ -1244,14 +1279,13 @@ export default function Invoices() {
                       key={inv._id}
                       className="border-b border-gray-50 hover:bg-slate-100 transition"
                     >
-                      {/* ✅ Backend se invoiceId field aata hai */}
                       <td className="py-3 px-4 font-medium text-gray-700">
                         {inv.invoiceId}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-slate-300 text-[#0F3A53] flex items-center justify-center text-xs font-bold">
-                            {inv.customerName.charAt(0)}
+                            {inv.customerName.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
                             <span className="text-gray-700">
@@ -1317,7 +1351,10 @@ export default function Invoices() {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${statusStyles[effectiveStatus] || "bg-gray-100 text-gray-500"}`}
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            statusStyles[effectiveStatus] ||
+                            "bg-gray-100 text-gray-500"
+                          }`}
                         >
                           {effectiveStatus}
                         </span>
@@ -1400,8 +1437,7 @@ export default function Invoices() {
           </table>
         </div>
 
-        {/* ✅ Real pagination from backend */}
-        <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
+        <div className="flex justify-between items-center mt-4 text-sm text-gray-500 mb-2 px-4">
           <span>
             Showing {invoices.length} of {pagination?.total || 0} invoices
           </span>
@@ -1409,19 +1445,23 @@ export default function Invoices() {
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
-              className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-40"
+              className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-40 hover:cursor-pointer"
             >
               Previous
             </button>
             {pagination &&
               Array.from(
                 { length: pagination.totalPages },
-                (_, i) => i + 1,
+                (_, i) => i + 1
               ).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition ${p === page ? "bg-[#0F3A53] text-white" : "border border-gray-200 hover:bg-gray-50"}`}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition hover:cursor-pointer ${
+                    p === page
+                      ? "bg-[#0F3A53] text-white"
+                      : "border border-gray-200 hover:bg-gray-50"
+                  }`}
                 >
                   {p}
                 </button>
@@ -1429,14 +1469,15 @@ export default function Invoices() {
             <button
               disabled={!pagination || page === pagination.totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-40"
+              className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-40 hover:cursor-pointer"
             >
               Next
             </button>
           </div>
         </div>
       </div>
-      {/* CREATE MODAL */}
+
+      {/* ══ CREATE MODAL ══ */}
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -1470,7 +1511,7 @@ export default function Invoices() {
               handleItemChange,
               handleAddItem,
               handleRemoveItem,
-              false,
+              false
             )}
             <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
               <button
@@ -1490,7 +1531,8 @@ export default function Invoices() {
           </div>
         </div>
       )}
-      {/* VIEW MODAL */}
+
+      {/* ══ VIEW MODAL ══ */}
       {selectedInvoice && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -1548,7 +1590,11 @@ export default function Invoices() {
                 <div className="flex justify-between">
                   <span className="text-gray-500 font-medium">Due Date</span>
                   <span
-                    className={`font-semibold ${getEffectiveStatus(selectedInvoice) === "OVERDUE" ? "text-[#dc2626]" : "text-gray-800"}`}
+                    className={`font-semibold ${
+                      getEffectiveStatus(selectedInvoice) === "OVERDUE"
+                        ? "text-[#dc2626]"
+                        : "text-gray-800"
+                    }`}
                   >
                     {formatDate(selectedInvoice.dueDate)}
                     {getEffectiveStatus(selectedInvoice) === "OVERDUE" &&
@@ -1563,7 +1609,10 @@ export default function Invoices() {
               <div className="flex justify-between">
                 <span className="text-gray-500 font-medium">Status</span>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-semibold ${statusStyles[getEffectiveStatus(selectedInvoice)] || "bg-gray-100 text-gray-500"}`}
+                  className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    statusStyles[getEffectiveStatus(selectedInvoice)] ||
+                    "bg-gray-100 text-gray-500"
+                  }`}
                 >
                   {getEffectiveStatus(selectedInvoice)}
                 </span>
@@ -1596,6 +1645,9 @@ export default function Invoices() {
                           <th className="text-right px-4 py-2.5 font-semibold">
                             Rate
                           </th>
+                          <th className="text-center px-3 py-2.5 font-semibold">
+                            GST
+                          </th>
                           <th className="text-right px-4 py-2.5 font-semibold">
                             Amt
                           </th>
@@ -1613,6 +1665,9 @@ export default function Invoices() {
                             <td className="px-4 py-2.5 text-gray-500 text-right">
                               {formatAmount(item.rate)}
                             </td>
+                            <td className="px-3 py-2.5 text-gray-500 text-center">
+                              {item.gst || 0}%
+                            </td>
                             <td className="px-4 py-2.5 text-gray-800 font-semibold text-right">
                               {formatAmount(item.amount)}
                             </td>
@@ -1626,7 +1681,7 @@ export default function Invoices() {
               <hr className="border-gray-100" />
               {[
                 ["Subtotal", formatAmount(selectedInvoice.subtotal)],
-                ["GST", formatAmount(selectedInvoice.gst)],
+                ["Total GST", formatAmount(selectedInvoice.gst)],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-gray-500 font-medium">{label}</span>
@@ -1663,7 +1718,8 @@ export default function Invoices() {
           </div>
         </div>
       )}
-      {/* EDIT MODAL */}
+
+      {/* ══ EDIT MODAL ══ */}
       {editInvoice && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -1697,7 +1753,7 @@ export default function Invoices() {
               handleEditItemChange,
               handleEditAddItem,
               handleEditRemoveItem,
-              true,
+              true
             )}
             <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
               <button

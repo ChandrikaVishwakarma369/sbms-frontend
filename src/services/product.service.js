@@ -1,5 +1,6 @@
 // Wahi mock data jo Products.jsx mein hai
 const PRODUCTS_MOCK = [
+  // ... aapka purana sara mock data yaha rahega ...
   {
     id: 1,
     name: "Smartphone X",
@@ -9,107 +10,35 @@ const PRODUCTS_MOCK = [
     stock: 45,
     image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=56&h=56&fit=crop",
   },
-  {
-    id: 2,
-    name: "Wireless Headphones",
-    category: "Accessories",
-    price: 89000.0,
-    status: "Active",
-    stock: 30,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=56&h=56&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Smartphone XM",
-    category: "Electronics",
-    price: 11900.0,
-    status: "Active",
-    stock: 20,
-    image: "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=56&h=56&fit=crop",
-  },
-  {
-    id: 4,
-    name: "Smart Watch",
-    category: "Wearables",
-    price: 11000.0,
-    status: "Low Stock",
-    stock: 5,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=56&h=56&fit=crop",
-  },
-  {
-    id: 5,
-    name: "Laptop Pro 15",
-    category: "Computers",
-    price: 99900.0,
-    status: "Active",
-    stock: 12,
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=56&h=56&fit=crop",
-  },
-  {
-    id: 6,
-    name: "Wireless Mouse",
-    category: "Accessories",
-    price: 45000.0,
-    status: "Active",
-    stock: 60,
-    image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=56&h=56&fit=crop",
-  },
-  {
-    id: 7,
-    name: "Mechanical Keyboard",
-    category: "Computers",
-    price: 95000.0,
-    status: "Inactive",
-    stock: 0,
-    image: "https://images.unsplash.com/photo-1595225476474-87563907a212?w=56&h=56&fit=crop",
-  },
-  {
-    id: 8,
-    name: "4K Monitor",
-    category: "Computers",
-    price: 34900.0,
-    status: "Active",
-    stock: 8,
-    image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=56&h=56&fit=crop",
-  },
-  {
-    id: 9,
-    name: "Bluetooth Speaker",
-    category: "Accessories",
-    price: 750001.0,
-    status: "Low Stock",
-    stock: 3,
-    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=56&h=56&fit=crop",
-  },
-  {
-    id: 10,
-    name: "iPad Air",
-    category: "Electronics",
-    price: 59900.0,
-    status: "Active",
-    stock: 18,
-    image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=56&h=56&fit=crop",
-  },
-  {
-    id: 11,
-    name: "USB-C Hub",
-    category: "Accessories",
-    price: 45000.0,
-    status: "Active",
-    stock: 55,
-    image: "https://images.unsplash.com/photo-1625948515291-069c6a821a42?w=56&h=56&fit=crop",
-  },
-  {
-    id: 12,
-    name: "GoPro Max",
-    category: "Cameras",
-    price: 45000.0,
-    status: "Active",
-    stock: 9,
-    image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=56&h=56&fit=crop",
-  },
+  // ... baki items
 ];
 
 export const getProducts = () => {
   return PRODUCTS_MOCK.filter((p) => p.status !== "Inactive");
+};
+
+// 👇 YE NAYA FUNCTION ADD KARNA HAI 👇
+
+// Agar aap Axios use kar rahi hain (jo ki MERN stack mein common hai):
+import axios from "axios"; 
+
+export const searchProducts = async ({ keyword, category, minPrice, maxPrice }) => {
+  try {
+    // Yahan apni backend API ka base URL set karein, e.g., 'http://localhost:5000/api/products/search'
+    // Agar proxy set hai to direct '/api/products/search' likh sakti hain
+    
+    const params = new URLSearchParams();
+    if (keyword) params.append("keyword", keyword);
+    if (category) params.append("category", category);
+    if (minPrice) params.append("minPrice", minPrice);
+    if (maxPrice) params.append("maxPrice", maxPrice);
+
+    const response = await axios.get(`/api/products/search?${params.toString()}`);
+    
+    // Aapke backend controller ke hisab se response.data mein { success: true, products: [...] } aayega
+    return response.data; 
+  } catch (error) {
+    console.error("Error searching products from backend:", error);
+    return { success: false, products: [] };
+  }
 };
