@@ -7,7 +7,7 @@ import {
   deleteInvoice,
 } from "../services/invoice.service";
 import { getCustomers } from "../services/customer.service";
-import { searchProducts } from "../services/product.service"; 
+import { searchProducts } from "../services/product.service";
 import API from "../utils/api";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
@@ -168,7 +168,8 @@ export default function Invoices() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [editCustomerSearch, setEditCustomerSearch] = useState("");
-  const [showEditCustomerDropdown, setShowEditCustomerDropdown] = useState(false);
+  const [showEditCustomerDropdown, setShowEditCustomerDropdown] =
+    useState(false);
 
   const [products, setProducts] = useState([]);
 
@@ -215,8 +216,8 @@ export default function Invoices() {
           (Array.isArray(customersData?.data)
             ? customersData.data
             : Array.isArray(customersData)
-            ? customersData
-            : []);
+              ? customersData
+              : []);
         setCustomers(extractedCustomers);
       } catch (err) {
         console.error("Failed to load customers data", err);
@@ -224,7 +225,8 @@ export default function Invoices() {
 
       try {
         const res = await API.get("/products");
-        const productsData = res.data?.products || (Array.isArray(res.data) ? res.data : []);
+        const productsData =
+          res.data?.products || (Array.isArray(res.data) ? res.data : []);
         setProducts(productsData);
       } catch (err) {
         console.error("Failed to load products data", err);
@@ -274,7 +276,7 @@ export default function Invoices() {
         res?.data?.products ||
         res?.products ||
         (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
-      if(extractedProducts.length > 0){
+      if (extractedProducts.length > 0) {
         setProducts(extractedProducts);
       }
     } catch (err) {
@@ -287,7 +289,7 @@ export default function Invoices() {
       setEditForm((prev) => ({
         ...prev,
         items: prev.items.map((item, i) =>
-          i === index ? { ...item, [field]: value } : item
+          i === index ? { ...item, [field]: value } : item,
         ),
       }));
       if (editErrors[`item_${index}_${field}`]) {
@@ -297,7 +299,7 @@ export default function Invoices() {
       setForm((prev) => ({
         ...prev,
         items: prev.items.map((item, i) =>
-          i === index ? { ...item, [field]: value } : item
+          i === index ? { ...item, [field]: value } : item,
         ),
       }));
       if (errors[`item_${index}_${field}`]) {
@@ -315,8 +317,14 @@ export default function Invoices() {
         ...prev,
         items: prev.items.map((item, i) =>
           i === index
-            ? { ...item, name: product.name, rate: price, gst: gst, showDropdown: false }
-            : item
+            ? {
+                ...item,
+                name: product.name,
+                rate: price,
+                gst: gst,
+                showDropdown: false,
+              }
+            : item,
         ),
       }));
     } else {
@@ -324,8 +332,14 @@ export default function Invoices() {
         ...prev,
         items: prev.items.map((item, i) =>
           i === index
-            ? { ...item, name: product.name, rate: price, gst: gst, showDropdown: false }
-            : item
+            ? {
+                ...item,
+                name: product.name,
+                rate: price,
+                gst: gst,
+                showDropdown: false,
+              }
+            : item,
         ),
       }));
     }
@@ -336,14 +350,14 @@ export default function Invoices() {
       setEditForm((prev) => ({
         ...prev,
         items: prev.items.map((item, i) =>
-          i === index ? { ...item, showDropdown: val } : item
+          i === index ? { ...item, showDropdown: val } : item,
         ),
       }));
     } else {
       setForm((prev) => ({
         ...prev,
         items: prev.items.map((item, i) =>
-          i === index ? { ...item, showDropdown: val } : item
+          i === index ? { ...item, showDropdown: val } : item,
         ),
       }));
     }
@@ -402,7 +416,7 @@ export default function Invoices() {
     const totalGst = calcTotalGstAmount(f.items);
     const grandTotal = subTotal + totalGst;
     const equivalentGstPercent = subTotal > 0 ? (totalGst / subTotal) * 100 : 0;
-    
+
     return {
       customerName: f.customerName.trim(),
       customerGst: f.customerGst || null,
@@ -413,7 +427,7 @@ export default function Invoices() {
       subtotal: subTotal,
       gst: totalGst,
       total: grandTotal,
-      gstPercent: parseFloat(equivalentGstPercent.toFixed(2)), 
+      gstPercent: parseFloat(equivalentGstPercent.toFixed(2)),
       status: f.status,
       paymentMethod: f.paymentMethod || null,
       notes: f.notes.trim() || null,
@@ -431,7 +445,7 @@ export default function Invoices() {
     try {
       const payload = buildPayload(form);
       const res = await createInvoice(payload);
-      
+
       if (res.success) {
         toast.success("Invoice created successfully!");
         setShowModal(false);
@@ -497,7 +511,7 @@ export default function Invoices() {
     try {
       const payload = buildPayload(editForm);
       const res = await updateInvoice(editInvoice._id, payload);
-      
+
       if (res.success) {
         toast.success("Invoice updated successfully!");
         fetchInvoices();
@@ -642,7 +656,7 @@ export default function Invoices() {
       `Rs. ${Number(inv.total).toLocaleString("en-IN")}`,
       194,
       totalY + 1,
-      { align: "right" }
+      { align: "right" },
     );
 
     if (inv.notes) {
@@ -662,15 +676,12 @@ export default function Invoices() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.text(
-      "Generated by SBMS — Smart Business Management System",
-      105,
-      292,
-      { align: "center" }
-    );
+    doc.text("Generated by SBMS — Smart Business Management System", 105, 292, {
+      align: "center",
+    });
 
     doc.save(
-      `${inv.invoiceId || "invoice"}_${inv.customerName.replace(/\s+/g, "_")}.pdf`
+      `${inv.invoiceId || "invoice"}_${inv.customerName.replace(/\s+/g, "_")}.pdf`,
     );
     toast.success("Invoice PDF downloaded!");
   };
@@ -681,7 +692,7 @@ export default function Invoices() {
     onAdd,
     onRemove,
     errs,
-    isEdit = false
+    isEdit = false,
   ) => {
     const subtotal = Math.round(calcSubtotal(items));
     const gstTotal = Math.round(calcTotalGstAmount(items));
@@ -729,7 +740,9 @@ export default function Invoices() {
               errs[`item_${i}_rate`];
 
             const filteredProducts = products.filter((p) =>
-              (p?.name || "").toLowerCase().includes((item.name || "").toLowerCase())
+              (p?.name || "")
+                .toLowerCase()
+                .includes((item.name || "").toLowerCase()),
             );
 
             return (
@@ -744,7 +757,7 @@ export default function Invoices() {
                         onItemChange(i, "name", val, isEdit);
                         handleItemDropdownToggle(i, true, isEdit);
                         // Optional search lag fix, only search after 3 words or let local filter handle it
-                        if(val.length > 2) handleProductSearch(val);
+                        if (val.length > 2) handleProductSearch(val);
                       }}
                       onFocus={() => {
                         handleItemDropdownToggle(i, true, isEdit);
@@ -752,7 +765,7 @@ export default function Invoices() {
                       onBlur={() =>
                         setTimeout(
                           () => handleItemDropdownToggle(i, false, isEdit),
-                          200
+                          200,
                         )
                       }
                       placeholder="Search product..."
@@ -808,7 +821,9 @@ export default function Invoices() {
                   <input
                     type="number"
                     value={item.qty}
-                    onChange={(e) => onItemChange(i, "qty", e.target.value, isEdit)}
+                    onChange={(e) =>
+                      onItemChange(i, "qty", e.target.value, isEdit)
+                    }
                     min="0.01"
                     step="0.01"
                     className={`col-span-2 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${
@@ -821,7 +836,9 @@ export default function Invoices() {
                   <input
                     type="number"
                     value={item.rate}
-                    onChange={(e) => onItemChange(i, "rate", e.target.value, isEdit)}
+                    onChange={(e) =>
+                      onItemChange(i, "rate", e.target.value, isEdit)
+                    }
                     min="0"
                     placeholder="0"
                     className={`col-span-2 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53] ${
@@ -834,7 +851,9 @@ export default function Invoices() {
                   <input
                     type="number"
                     value={item.gst}
-                    onChange={(e) => onItemChange(i, "gst", e.target.value, isEdit)}
+                    onChange={(e) =>
+                      onItemChange(i, "gst", e.target.value, isEdit)
+                    }
                     min="0"
                     placeholder="0"
                     className="col-span-2 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F3A53]"
@@ -898,7 +917,7 @@ export default function Invoices() {
     setShowDropdown,
     onSelect,
     selectedGst,
-    errs
+    errs,
   ) => {
     const filteredCustomers = customers.filter(
       (c) =>
@@ -907,7 +926,7 @@ export default function Invoices() {
           .includes((searchVal || "").toLowerCase()) ||
         (c?.gstNumber || "")
           .toLowerCase()
-          .includes((searchVal || "").toLowerCase())
+          .includes((searchVal || "").toLowerCase()),
     );
     return (
       <div>
@@ -991,7 +1010,7 @@ export default function Invoices() {
     onItemChange,
     onAdd,
     onRemove,
-    isEdit = false
+    isEdit = false,
   ) => (
     <div className="space-y-4">
       {isEdit
@@ -1002,7 +1021,7 @@ export default function Invoices() {
             setShowEditCustomerDropdown,
             handleEditCustomerSelect,
             f.customerGst,
-            errs
+            errs,
           )
         : renderCustomerField(
             customerSearch,
@@ -1011,7 +1030,7 @@ export default function Invoices() {
             setShowCustomerDropdown,
             handleCustomerSelect,
             f.customerGst,
-            errs
+            errs,
           )}
 
       <div className="grid grid-cols-2 gap-3">
@@ -1234,9 +1253,7 @@ export default function Invoices() {
                 <th className="py-4 px-4 font-semibold tracking-wider">
                   Items
                 </th>
-                <th className="py-4 px-4 font-semibold tracking-wider">
-                  Date
-                </th>
+                <th className="py-4 px-4 font-semibold tracking-wider">Date</th>
                 <th className="py-4 px-4 font-semibold tracking-wider">
                   Due Date
                 </th>
@@ -1248,19 +1265,13 @@ export default function Invoices() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="text-center text-gray-400 py-8"
-                  >
+                  <td colSpan={8} className="text-center text-gray-400 py-8">
                     Loading invoices...
                   </td>
                 </tr>
               ) : invoices.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="text-center text-gray-400 py-8"
-                  >
+                  <td colSpan={8} className="text-center text-gray-400 py-8">
                     No invoices found.
                   </td>
                 </tr>
@@ -1268,8 +1279,7 @@ export default function Invoices() {
                 invoices.map((inv) => {
                   const effectiveStatus = getEffectiveStatus(inv);
                   const isAutoOverdue =
-                    effectiveStatus === "OVERDUE" &&
-                    inv.status === "PENDING";
+                    effectiveStatus === "OVERDUE" && inv.status === "PENDING";
                   const daysOverdue =
                     isAutoOverdue && inv.dueDate
                       ? getDaysOverdue(inv.dueDate)
@@ -1452,7 +1462,7 @@ export default function Invoices() {
             {pagination &&
               Array.from(
                 { length: pagination.totalPages },
-                (_, i) => i + 1
+                (_, i) => i + 1,
               ).map((p) => (
                 <button
                   key={p}
@@ -1511,7 +1521,7 @@ export default function Invoices() {
               handleItemChange,
               handleAddItem,
               handleRemoveItem,
-              false
+              false,
             )}
             <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
               <button
@@ -1750,10 +1760,10 @@ export default function Invoices() {
               editForm,
               handleEditChange,
               editErrors,
-              handleEditItemChange,
-              handleEditAddItem,
-              handleEditRemoveItem,
-              true
+              handleItemChange, 
+              handleAddItem,
+              handleRemoveItem,
+              true,
             )}
             <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
               <button
