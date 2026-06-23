@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/orders";
+const API_URL = "https://sbms-backend.onrender.com/api/orders";
 
 // 📥 GET ALL ORDERS
 export const getOrdersMock = async (status = "All", page = 1, limit = 100) => {

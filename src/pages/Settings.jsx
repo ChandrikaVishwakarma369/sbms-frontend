@@ -35,7 +35,7 @@ const Settings = () => {
   const fetchUser = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/user/profile",
+        "https://sbms-backend.onrender.com/api/user/profile",
         { withCredentials: true }
       );
       setUserData(response.data);
@@ -71,7 +71,7 @@ const Settings = () => {
     try {
       setLoading(true);
       const response = await axios.put(
-        "http://localhost:5000/api/user/update-profile",
+        "https://sbms-backend.onrender.com/api/user/update-profile",
         {
           name: userData.name,
           email: userData.email,
@@ -96,7 +96,7 @@ const Settings = () => {
     try {
       setLoading(true);
       const response = await axios.put(
-        "http://localhost:5000/api/user/change-password",
+        "https://sbms-backend.onrender.com/api/user/change-password",
         {
           currentPassword: userData.currentPassword,
           newPassword: userData.newPassword,

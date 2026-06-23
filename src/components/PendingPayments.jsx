@@ -10,7 +10,7 @@ const PendingPayments = () => {
   useEffect(() => {
     const fetchPendingPayments = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/invoices/pending", {
+        const response = await fetch("https://sbms-backend.onrender.com/api/invoices/pending", {
           headers: {
             // Add credentials if needed, but assuming cookie-based auth is handled by browser
           },

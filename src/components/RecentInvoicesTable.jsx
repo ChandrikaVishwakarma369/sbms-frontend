@@ -9,7 +9,7 @@ const RecentInvoices = () => {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/invoices?limit=5");
+        const response = await fetch("https://sbms-backend.onrender.com/api/invoices?limit=5");
         const result = await response.json();
         if (result.success) {
           const formatted = result.data.map((inv) => ({

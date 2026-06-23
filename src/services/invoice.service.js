@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/invoices";
+const API_URL = "https://sbms-backend.onrender.com/api/invoices";
 
 // ✅ Token helper — localStorage se JWT lena
 const getAuthHeaders = () => ({

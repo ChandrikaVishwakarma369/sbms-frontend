@@ -27,7 +27,7 @@ const SalesChart = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/orders/sales")
+    fetch("https://sbms-backend.onrender.com/api/orders/sales")
       .then((res) => res.json())
       .then((res) => {
         if (res.success) {

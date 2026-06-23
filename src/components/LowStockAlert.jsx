@@ -13,7 +13,7 @@ const LowStockAlert = () => {
   useEffect(() => {
     const fetchLowStock = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/products/low-stock");
+        const response = await fetch("https://sbms-backend.onrender.com/api/products/low-stock");
         const result = await response.json();
         if (result.success) {
           setProducts(result.products);

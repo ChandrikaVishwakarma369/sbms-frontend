@@ -24,7 +24,7 @@ import axios from "axios";
 
 export const searchProducts = async ({ keyword, category, minPrice, maxPrice }) => {
   try {
-    // Yahan apni backend API ka base URL set karein, e.g., 'http://localhost:5000/api/products/search'
+    // Yahan apni backend API ka base URL set karein, e.g., 'https://sbms-backend.onrender.com/api/products/search'
     // Agar proxy set hai to direct '/api/products/search' likh sakti hain
     
     const params = new URLSearchParams();

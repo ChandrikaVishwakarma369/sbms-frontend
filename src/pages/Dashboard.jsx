@@ -27,7 +27,7 @@ const Dashboard = () => {
   const [statsData, setStatsData] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/dashboard")
+    fetch("https://sbms-backend.onrender.com/api/dashboard")
       .then((res) => res.json())
       .then((res) => {
         if (res.success) {

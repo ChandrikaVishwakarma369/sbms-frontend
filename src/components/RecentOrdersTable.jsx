@@ -12,7 +12,7 @@ const RecentOrdersTable = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/orders?limit=5");
+        const response = await fetch("https://sbms-backend.onrender.com/api/orders?limit=5");
         const result = await response.json();
         if (result.success) {
           setOrders(result.data);
